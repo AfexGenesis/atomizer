@@ -1,5 +1,6 @@
 add_subdirectory(core)
 add_subdirectory(gui)
 add_subdirectory(render)
+find_package(Vulkan)
 add_executable(atomizer main.cpp)
-target_link_libraries(atomizer PRIVATE Vulkan::Vulkan Qt6::Core Qt6::Gui Qt6::Widgets)
+target_link_libraries(atomizer PRIVATE atomizer_utils Vulkan::Vulkan Qt6::Core Qt6::Gui Qt6::Widgets)
