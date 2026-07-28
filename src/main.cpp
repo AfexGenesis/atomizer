@@ -3,7 +3,9 @@
 #include <QVulkanWindowRenderer>
 #include <QVulkanInstance>
 #include <QWidget>
+#include <QHBoxLayout>
 #include <print>
+#include "render/vulkan.hpp"
 #include "core/cif.hpp"
 
 int main(int argc, char *argv[]) {
@@ -28,9 +30,17 @@ int main(int argc, char *argv[]) {
 
     QApplication app(argc, argv);
     
+    QVulkanInstance inst;
+    
+    atomizer *vulkanWindow = new atomizer();
+    QWidget *vulkanWidget = QWidget::createWindowContainer(vulkanWindow);
     QWidget window;
     window.resize(800, 800);
     window.setWindowTitle("atomizer");
+    QHBoxLayout *layout = new QHBoxLayout(&window);
+    QWidget *sidebar = new QWidget;
+    layout->addWidget(vulkanWidget);
+
     window.show();
 
     return app.exec();

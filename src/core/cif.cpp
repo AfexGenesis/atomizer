@@ -70,7 +70,7 @@ void ciff::parse(const std::string& cif){
             
                 if (r.size() > m){
                     if (r[m] == "1"){
-                        std::println("{}, {}, {}, {}, {}, {}, {}, {}, {}", r[t], r[i], r[d], r[o], r[s], r[x], r[y], r[z], r[m]);
+                        // std::println("{}, {}, {}, {}, {}, {}, {}, {}, {}", r[t], r[i], r[d], r[o], r[s], r[x], r[y], r[z], r[m]);
                     }
                 }
                 //std::println("{}", std::views::all(r));
