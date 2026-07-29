@@ -1,21 +1,12 @@
 #include <vulkan/vulkan.h>
 #include "vulkan.hpp"
-#include <DirectXMath.h>
 
-atomizerer::atomizerer(QVulkanWindow *w) : atomizing(w){
-
-}
-atomizerer::~atomizerer(){
-
-}
 QVulkanWindowRenderer* atomizer::createRenderer(){
-    
     return new atomizerer (this);
 }
 void atomizerer::initResources(){
     initVulkan();
 }
-
 void atomizerer::initVulkan(){
     vulkanInstance();
 }

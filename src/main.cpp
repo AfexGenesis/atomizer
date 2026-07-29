@@ -16,16 +16,18 @@ int main(int argc, char *argv[]) {
         if ((arg == "input") && (input + 1 < argc)){
             cif = argv[++input];
         }else{
-            std::print("type /help for listed commands");
+            std::println("type /help for listed commands");
+            return 69;
             }
     }
 
     if (!cif.empty()){
         ciff parser;
         parser.parse(cif);
-        std::print("it worked");
+        std::println("it worked");
     }else{
-        std::print("no cif");
+        std::println("no cif");
+        return 69;
     }
 
     QApplication app(argc, argv);
