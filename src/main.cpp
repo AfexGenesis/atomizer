@@ -30,9 +30,12 @@ int main(int argc, char *argv[]) {
 
     QApplication app(argc, argv);
     
-    QVulkanInstance inst;
+    QVulkanInstance instance;
+    if (!instance.create()) return -1;
+
+    QVulkanWindow *vulkanWindow = new QVulkanWindow();
+    vulkanWindow->setVulkanInstance(&instance);
     
-    atomizer *vulkanWindow = new atomizer();
     QWidget *vulkanWidget = QWidget::createWindowContainer(vulkanWindow);
     QWidget window;
     window.resize(800, 800);
