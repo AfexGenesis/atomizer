@@ -7,7 +7,6 @@ class atomizerer : public QVulkanWindowRenderer {
     atomizerer(QVulkanWindow *w);
 
     private: 
-        QVulkanInstance instance;
         void startNextFrame() override;
         void initResources() override;
         void cleanup();
