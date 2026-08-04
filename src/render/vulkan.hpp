@@ -4,15 +4,16 @@
 
 class atomizerer : public QVulkanWindowRenderer {
     public:
-    atomizerer(QVulkanWindow *w);
+    explicit atomizerer(QVulkanWindow *w) : window(w) {}
 
     private: 
         void startNextFrame() override;
         void initResources() override;
         void cleanup();
-        
+        QVulkanWindow *window;
 };
 
-class atomizer : public QVulkanWindow {
-    public: QVulkanWindowRenderer *createRenderer() override;
+class atomizer : public QVulkanWindow{
+    public: 
+    QVulkanWindowRenderer *createRenderer() override;
 };

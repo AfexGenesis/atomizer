@@ -1,6 +1,5 @@
 #include <QApplication>
 #include <QVulkanWindow>
-#include <QVulkanWindowRenderer>
 #include <QVulkanInstance>
 #include <QWidget>
 #include <QHBoxLayout>
@@ -15,8 +14,11 @@ int main(int argc, char *argv[]) {
         std::string arg = argv[input];
         if ((arg == "input") && (input + 1 < argc)){
             cif = argv[++input];
+        }else if ((arg == "help")){
+            std::println("type ./atomizer input ~protein.cif~");
+            return 69;
         }else{
-            std::println("type /help for listed commands");
+            std::println("type ./atomizer help for listed commands");
             return 69;
             }
     }
@@ -31,11 +33,13 @@ int main(int argc, char *argv[]) {
     }
 
     QApplication app(argc, argv);
-    
-    QVulkanInstance instance;
-    if (!instance.create()) return -1;
 
-    QVulkanWindow *vulkanWindow = new QVulkanWindow();
+    QVulkanInstance instance;
+    if (!instance.create()) {
+        throw std::runtime_error("RUN TIME ERROR ON INSTANCE");
+    }
+
+    QVulkanWindow *vulkanWindow = new atomizer();
     vulkanWindow->setVulkanInstance(&instance);
     
     QWidget *vulkanWidget = QWidget::createWindowContainer(vulkanWindow);
