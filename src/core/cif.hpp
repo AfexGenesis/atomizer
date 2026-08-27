@@ -2,5 +2,6 @@
 #include <string>
 
 class ciff {
-    public: void parse(const std::string& cif);
+    public: 
+    void parse(const std::string& cif);
 };
