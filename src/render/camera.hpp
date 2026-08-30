@@ -1,4 +1,3 @@
-#include <QVector4D>
 #include <DirectXMath.h>
 
 class camera {
