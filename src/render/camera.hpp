@@ -6,8 +6,8 @@ class camera {
 
     void yaw(float degree);
     void pitch(float degree);
-    void walk(float degree);
-    void strafe(float degree);
+    void walk(float amount);
+    void strafe(float amount);
     DirectX::XMFLOAT4X4 matrix() const;
 
     private:

@@ -8,10 +8,6 @@
 
 using namespace DirectX;
 
-QVulkanWindowRenderer* atomizer::createRenderer(){
-    return new atomizerer (this, true);
-}
-
 struct vertex {
     DirectX::XMFLOAT2 position;
     DirectX::XMFLOAT3 colour;
@@ -29,7 +25,7 @@ static inline VkDeviceSize aligned(VkDeviceSize v, VkDeviceSize alignByte){
     return (v + alignByte - 1) & ~(alignByte - 1);
 }
 
-atomizerer::atomizerer(QVulkanWindow *window, bool msaa) : windows(window){
+atomizerer::atomizerer(QVulkanWindow *window, bool msaa) : windows(window), cam(DirectX::XMFLOAT4(0.0f, 0.0f, -5.0f, 1.0f)){
     if (msaa){
         const QList<int> samples = windows->supportedSampleCounts();
         qDebug() << "debug supported samples" << samples;
@@ -386,4 +382,28 @@ void atomizerer::startNextFrame(){
     devicef->vkCmdEndRenderPass(commandblock);
     windows->frameReady();
     //windows->requestUpdate();
+}
+
+void atomizerer::yaw(float degrees){
+    QMutexLocker locker(&mutexgui);
+    cam.yaw(degrees);
+    markViewProjDirty();
+}
+
+void atomizerer::pitch(float degrees){
+    QMutexLocker locker(&mutexgui);
+    cam.pitch(degrees);
+    markViewProjDirty();
+}
+
+void atomizerer::walk(float amount){
+    QMutexLocker locker(&mutexgui);
+    cam.walk(amount);
+    markViewProjDirty();
+}
+
+void atomizerer::strafe(float amount){
+    QMutexLocker locker(&mutexgui);
+    cam.strafe(amount);
+    markViewProjDirty();
 }
