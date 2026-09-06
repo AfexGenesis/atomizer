@@ -7,7 +7,10 @@ camera::camera(const DirectX::XMFLOAT4 &p):
     position(p.x, p.y, p.z, 1.0f),
     yaws(0.0f),
     pitchs(0.0f)
-{}
+{
+    DirectX::XMStoreFloat4x4(&yawm, DirectX::XMMatrixIdentity());
+    DirectX::XMStoreFloat4x4(&pitchm, DirectX::XMMatrixIdentity());
+}
 
 static inline void clamp360(float *v){
     if (*v > DirectX::XM_2PI) *v -= DirectX::XM_2PI;

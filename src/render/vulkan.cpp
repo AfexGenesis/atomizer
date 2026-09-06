@@ -294,6 +294,18 @@ void atomizerer::initResources(){
     //throw std::runtime_error("resources runtime");
 }
 
+void atomizerer::initSwapChainResources(){
+    const QSize qsize = windows->swapChainImageSize();
+    const float aspect = qsize.height() ? qsize.width() / (float) qsize.height() : 1.0f;
+    DirectX::XMMATRIX projectile = DirectX::XMMatrixPerspectiveFovLH(DirectX::XM_PIDIV2, aspect, 0.01f, 100.0f);
+    DirectX::XMFLOAT4X4 projectiled;
+    DirectX::XMStoreFloat4x4(&projectiled, projectile);
+
+    projectiled.m[1][1] *= -1.0f;
+    projm = projectiled;
+    markViewProjDirty();
+}
+
 void atomizerer::releaseResources(){
     qDebug("releaseResources");
 
@@ -328,6 +340,20 @@ void atomizerer::releaseResources(){
     }
 }
 
+void atomizerer::getMatrices(DirectX::XMFLOAT4X4 *mvp, DirectX::XMFLOAT4X4 *model, DirectX::XMFLOAT4X4 *normalmode, DirectX::XMFLOAT4 *eyep){
+    DirectX::XMMATRIX m = DirectX::XMMatrixIdentity();
+    DirectX::XMStoreFloat4x4(model, m);
+    DirectX::XMMATRIX normalm = DirectX::XMMatrixTranspose(DirectX::XMMatrixInverse(nullptr, m));
+    DirectX::XMStoreFloat4x4(normalmode, normalm);
+    DirectX::XMFLOAT4X4 viewf = cam.matrix();
+    DirectX::XMMATRIX view = DirectX::XMLoadFloat4x4(&viewf);
+    DirectX::XMMATRIX proj = DirectX::XMLoadFloat4x4(&projm);
+    DirectX::XMMATRIX mvpm = DirectX::XMMatrixMultiply(DirectX::XMMatrixMultiply(m, view), proj);
+    DirectX::XMStoreFloat4x4(mvp, mvpm);
+    DirectX::XMMATRIX inview = DirectX::XMMatrixInverse(nullptr, view);
+    DirectX::XMStoreFloat4(eyep, inview.r[3]);
+}
+
 void atomizerer::startNextFrame(){
     VkDevice device = windows->device();
     VkCommandBuffer piastry = windows->currentCommandBuffer();
@@ -358,6 +384,13 @@ void atomizerer::startNextFrame(){
         qFatal("no pointer of the quint8 secondary weapon %d", result);
     }
 
+    DirectX::XMFLOAT4X4 mvp, model, normalmode;
+    DirectX::XMFLOAT4 eyep;
+    getMatrices(&mvp, &model, &normalmode, &eyep);
+    memcpy(pointer, &mvp, sizeof(DirectX::XMFLOAT4X4));
+
+    devicef->vkUnmapMemory(device, bufferm);
+
     devicef->vkCmdBindPipeline(piastry, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelane);
     devicef->vkCmdBindDescriptorSets(piastry, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeout, 0, 1, 
     &layers[windows->currentFrame()], 0, nullptr);
@@ -381,7 +414,7 @@ void atomizerer::startNextFrame(){
     devicef->vkCmdDraw(piastry, 3, 1, 0, 0);
     devicef->vkCmdEndRenderPass(commandblock);
     windows->frameReady();
-    //windows->requestUpdate();
+    windows->requestUpdate();
 }
 
 void atomizerer::yaw(float degrees){
