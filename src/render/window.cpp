@@ -20,7 +20,7 @@ void atomizer::mouseReleaseEvent(QMouseEvent *e){
 }
 
 void atomizer::mouseMoveEvent(QMouseEvent *e){
-    if (!pressed)
+    if (pressed)
     return;
     int dx = e->position().toPoint().x() - lp.x();
     int dy = e->position().toPoint().y() - lp.y();
@@ -39,9 +39,9 @@ void atomizer::keyPressEvent(QKeyEvent *e){
     switch(e->key()){
         case Qt::Key_W: windower->walk(amount);
         break;
-        case Qt::Key_S: windower->walk(amount);
+        case Qt::Key_S: windower->walk(-amount);
         break;
-        case Qt::Key_A: windower->strafe(amount);
+        case Qt::Key_A: windower->strafe(-amount);
         break;
         case Qt::Key_D: windower->strafe(amount);
         break;
