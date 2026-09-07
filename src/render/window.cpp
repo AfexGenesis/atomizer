@@ -26,10 +26,10 @@ void atomizer::mouseMoveEvent(QMouseEvent *e){
     int dy = e->position().toPoint().y() - lp.y();
 
     if (dy)
-    windower->pitch(dy / 10.0f);
+    windower->pitch(dy / 169.420f);
 
     if (dx)
-    windower->yaw(dx / 10.0f);
+    windower->yaw(dx / 169.420f);
 
     lp = e->position().toPoint();
 }

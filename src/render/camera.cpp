@@ -14,7 +14,7 @@ camera::camera(const DirectX::XMFLOAT4 &p):
 
 static inline void clamp360(float *v){
     if (*v > DirectX::XM_2PI) *v -= DirectX::XM_2PI;
-    if (*v < DirectX::XM_2PI) *v += DirectX::XM_2PI;
+    if (*v < -DirectX::XM_2PI) *v += DirectX::XM_2PI;
 }
 
 void camera::yaw(float degree){
@@ -23,7 +23,7 @@ void camera::yaw(float degree){
 
     DirectX::XMMATRIX pm = DirectX::XMLoadFloat4x4(&pitchm);
     DirectX::XMMATRIX ym = DirectX::XMMatrixRotationY(yaws);
-    DirectX::XMStoreFloat4x4(&yawm, DirectX::XMMatrixIdentity());
+    DirectX::XMStoreFloat4x4(&yawm, ym);
     DirectX::XMMATRIX rm = DirectX::XMMatrixMultiply(pm, ym);
 
     DirectX::XMVECTOR qfribes = DirectX::XMVectorSet(0.0f, 0.0f, 1.0f, 0.0);
@@ -40,8 +40,8 @@ void camera::pitch(float degree){
     clamp360(&pitchs);
 
     DirectX::XMMATRIX pmm = DirectX::XMLoadFloat4x4(&yawm);
-    DirectX::XMMATRIX ymm = DirectX::XMMatrixRotationY(pitchs);
-    DirectX::XMStoreFloat4x4(&pitchm, DirectX::XMMatrixIdentity());
+    DirectX::XMMATRIX ymm = DirectX::XMMatrixRotationX(pitchs);
+    DirectX::XMStoreFloat4x4(&pitchm, ymm);
     DirectX::XMMATRIX rmm = DirectX::XMMatrixMultiply(pmm, ymm);
 
     DirectX::XMVECTOR qqfribes = DirectX::XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f);
