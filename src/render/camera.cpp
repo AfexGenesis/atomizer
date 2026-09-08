@@ -26,7 +26,7 @@ void camera::yaw(float degree){
     DirectX::XMStoreFloat4x4(&yawm, ym);
     DirectX::XMMATRIX rm = DirectX::XMMatrixMultiply(pm, ym);
 
-    DirectX::XMVECTOR qfribes = DirectX::XMVectorSet(0.0f, 0.0f, 1.0f, 0.0);
+    DirectX::XMVECTOR qfribes = DirectX::XMVectorSet(0.0f, 0.0f, -1.0f, 0.0);
     DirectX::XMVECTOR qsides = DirectX::XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f);
     DirectX::XMVECTOR wfribes = DirectX::XMVector4Transform(qfribes, rm);
     DirectX::XMVECTOR wsides = DirectX::XMVector4Transform(qsides, rm);
@@ -44,8 +44,8 @@ void camera::pitch(float degree){
     DirectX::XMStoreFloat4x4(&pitchm, ymm);
     DirectX::XMMATRIX rmm = DirectX::XMMatrixMultiply(pmm, ymm);
 
-    DirectX::XMVECTOR qqfribes = DirectX::XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f);
-    DirectX::XMVECTOR qvertical = DirectX::XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f); 
+    DirectX::XMVECTOR qqfribes = DirectX::XMVectorSet(0.0f, 0.0f, -1.0f, 0.0f);
+    DirectX::XMVECTOR qvertical = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f); 
     DirectX::XMVECTOR wwfribes = DirectX::XMVector4Transform(qqfribes, ymm);
     DirectX::XMVECTOR wvertical = DirectX::XMVector4Transform(qvertical, rmm);
 
@@ -68,7 +68,7 @@ DirectX::XMFLOAT4X4 camera::matrix() const{
     DirectX::XMMATRIX ymmm = DirectX::XMLoadFloat4x4(&yawm);
     DirectX::XMMATRIX rmmm = DirectX::XMMatrixMultiply(pmmm, ymmm);
     DirectX::XMMATRIX tm = DirectX::XMMatrixTranslation(-position.x, -position.y, -position.z);
-    DirectX::XMMATRIX v = DirectX::XMMatrixMultiply(rmmm, tm);
+    DirectX::XMMATRIX v = DirectX::XMMatrixMultiply(tm, rmmm);
 
     DirectX::XMFLOAT4X4 result;
     DirectX::XMStoreFloat4x4(&result, v);

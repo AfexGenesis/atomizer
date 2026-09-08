@@ -12,6 +12,7 @@ QVulkanWindowRenderer* atomizer::createRenderer(){
 
 void atomizer::mousePressEvent(QMouseEvent *e){
     pressed = false;
+    lp = e->position().toPoint();
 }
 
 void atomizer::mouseReleaseEvent(QMouseEvent *e){
@@ -37,9 +38,9 @@ void atomizer::mouseMoveEvent(QMouseEvent *e){
 void atomizer::keyPressEvent(QKeyEvent *e){
     const float amount = e->modifiers().testFlag(Qt::ShiftModifier) ? 1.0f : 0.1f;
     switch(e->key()){
-        case Qt::Key_W: windower->walk(amount);
+        case Qt::Key_W: windower->walk(-amount);
         break;
-        case Qt::Key_S: windower->walk(-amount);
+        case Qt::Key_S: windower->walk(amount);
         break;
         case Qt::Key_A: windower->strafe(-amount);
         break;
