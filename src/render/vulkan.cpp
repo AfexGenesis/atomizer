@@ -366,6 +366,14 @@ void atomizerer::releaseResources(){
         devicef->vkFreeMemory(device, bufferm, nullptr);
         bufferm = VK_NULL_HANDLE;
     }
+    if (ibuffer){
+        devicef->vkDestroyBuffer(device, ibuffer, nullptr);
+        ibuffer = VK_NULL_HANDLE;
+    }
+    if (ibufferm){
+        devicef->vkFreeMemory(device, ibufferm, nullptr);
+        ibufferm = VK_NULL_HANDLE;
+    }
 }
 
 void atomizerer::getMatrices(DirectX::XMFLOAT4X4 *mvp, DirectX::XMFLOAT4X4 *model, DirectX::XMFLOAT4X4 *normalmode, DirectX::XMFLOAT4 *eyep){

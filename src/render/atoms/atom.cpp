@@ -40,6 +40,8 @@ void atom::generation(float radius, uint32_t stacks, uint32_t slices, const Dire
             uint32_t br = bl + 1;
 
             indices.push_back(tl);
+            indices.push_back(bl);
+            indices.push_back(tr);
             indices.push_back(tr);
             indices.push_back(bl);
             indices.push_back(br);
