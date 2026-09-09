@@ -5,6 +5,7 @@
 #include <QMutex>
 #include "camera.hpp"
 #include "window.hpp"
+#include "atoms/atom.hpp"
 
 class atomizerer : public QVulkanWindowRenderer {
     public:
@@ -40,6 +41,9 @@ class atomizerer : public QVulkanWindowRenderer {
         VkPipelineLayout pipeout = VK_NULL_HANDLE;
         VkPipelineCache pipeche = VK_NULL_HANDLE;
         VkPipeline pipelane = VK_NULL_HANDLE;
+        uint32_t indexc = 0;
+        VkBuffer ibuffer = VK_NULL_HANDLE;
+        VkDeviceMemory ibufferm = VK_NULL_HANDLE;
 
     DirectX::XMVECTOR lightp;
     DirectX::XMFLOAT4X4 projm;

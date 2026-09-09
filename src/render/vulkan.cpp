@@ -8,17 +8,6 @@
 
 using namespace DirectX;
 
-struct vertex {
-    DirectX::XMFLOAT2 position;
-    DirectX::XMFLOAT3 colour;
-};
-
-static const vertex vertexd[] = {
-    {{-0.5f, 0.5f}, {1.0f, 0.0f, 0.0f}},
-    {{-0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
-    {{0.5f, -0.5f}, {0.0f, 0.0f, 1.0f}}
-};
-
 static const int size = sizeof(DirectX::XMFLOAT4X4);
 
 static inline VkDeviceSize aligned(VkDeviceSize v, VkDeviceSize alignByte){
@@ -75,11 +64,13 @@ void atomizerer::initResources(){
     const VkPhysicalDeviceLimits *pdevicel = &windows->physicalDeviceProperties()->limits;
     const VkDeviceSize uniAlign = pdevicel->minUniformBufferOffsetAlignment;
     qDebug("Debugging on uniAlign %d", (uint) uniAlign);
+    atom atom(1.0f, 64, 64, DirectX::XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f), true);
+    indexc = uint32_t(atom.indi().size());
     VkBufferCreateInfo bufferinfo;
     memset(&bufferinfo, 0, sizeof(bufferinfo));
     bufferinfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
 
-    const VkDeviceSize vallosaurs = aligned(sizeof(vertexd), uniAlign);
+    const VkDeviceSize vallosaurs = atom.verti().size() * sizeof(atomertex);
     const VkDeviceSize uallosaurs = aligned(size, uniAlign);
     bufferinfo.size = vallosaurs + ccf * uallosaurs;
     bufferinfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
@@ -112,7 +103,7 @@ void atomizerer::initResources(){
         qFatal("pointers did not work %d", result);
     }
 
-    memcpy(pointer, vertexd, sizeof(vertexd));
+    memcpy(pointer, atom.verti().data(), atom.verti().size() * sizeof(atomertex));
     DirectX::XMMATRIX id = DirectX::XMMatrixIdentity();
     DirectX::XMFLOAT4X4 data;
     DirectX::XMStoreFloat4x4(&data, id);
@@ -126,17 +117,54 @@ void atomizerer::initResources(){
     }
     devicef->vkUnmapMemory(device, bufferm);
 
+    const VkDeviceSize indexs = atom.indi().size() * sizeof(uint32_t);
+    VkBufferCreateInfo indexb;
+    memset(&indexb, 0, sizeof(indexb));
+    indexb.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    indexb.size = indexs;
+    indexb.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+
+    result = devicef->vkCreateBuffer(device, &indexb, nullptr, &ibuffer);
+    if (result != VK_SUCCESS){
+        qFatal("failted at creating the index buffer %d", result);
+    }
+
+    VkMemoryRequirements indexmri;
+    devicef->vkGetBufferMemoryRequirements(device, ibuffer, &indexmri);
+    VkMemoryAllocateInfo iallosaurus ={
+        VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO, nullptr, indexmri.size, windows->hostVisibleMemoryIndex()
+    };
+
+    result = devicef->vkAllocateMemory(device, &iallosaurus, nullptr, &ibufferm);
+    if (result != VK_SUCCESS){
+        qFatal("failed to enable index memory %d", result);
+    }
+
+    result = devicef->vkBindBufferMemory(device, ibuffer, ibufferm, 0);
+    if (result != VK_SUCCESS){
+        qFatal("jarvis locate goth mommys in 69km radius %d", result);
+    }
+
+    quint8 *ipointer;
+    result = devicef->vkMapMemory(device, ibufferm, 0, indexs, 0, reinterpret_cast<void **> (&ipointer));
+    if (result != VK_SUCCESS){
+        qFatal("can't map memory find god %d", result);
+    }
+    memcpy(ipointer, atom.indi().data(), indexs);
+    devicef->vkUnmapMemory(device, ibufferm);
+
     VkVertexInputBindingDescription vertexb ={
-        0, sizeof(vertex), VK_VERTEX_INPUT_RATE_VERTEX
+        0, sizeof(atomertex), VK_VERTEX_INPUT_RATE_VERTEX
     };
     VkVertexInputAttributeDescription vertexa[] ={
         {
-            0, 0, VK_FORMAT_R32G32_SFLOAT, offsetof(vertex, position)
+            0, 0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(atomertex, position)
         },
         {
-            1, 0, VK_FORMAT_R32G32B32_SFLOAT, sizeof(DirectX::XMFLOAT2)
+            1, 0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(atomertex, colour)
         }
     };
+
     VkPipelineVertexInputStateCreateInfo verstappen;
     verstappen.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
     verstappen.pNext = nullptr;
@@ -396,6 +424,7 @@ void atomizerer::startNextFrame(){
     &layers[windows->currentFrame()], 0, nullptr);
     VkDeviceSize size = 0;
     devicef->vkCmdBindVertexBuffers(piastry, 0, 1, &buffer, &size);
+    devicef->vkCmdBindIndexBuffer(piastry, ibuffer, 0, VK_INDEX_TYPE_UINT32);
     VkViewport vp;
 
     vp.x = vp.y = 0;
@@ -411,7 +440,7 @@ void atomizerer::startNextFrame(){
     rs.extent.height = vp.height;
     devicef->vkCmdSetScissor(piastry, 0, 1, &rs);
 
-    devicef->vkCmdDraw(piastry, 3, 1, 0, 0);
+    devicef->vkCmdDrawIndexed(piastry, indexc, 1, 0, 0, 0);
     devicef->vkCmdEndRenderPass(commandblock);
     windows->frameReady();
     windows->requestUpdate();

@@ -3,18 +3,18 @@ cbuffer cb : register(b0, space0){
 };
 
 struct i{
-    [[vk::location(0)]] float2 position : POSITION;
-    [[vk::location(1)]] float3 colour : COLOR0;
+    [[vk::location(0)]] float4 position : POSITION;
+    [[vk::location(1)]] float4 colour : COLOR0;
 };
 
 struct o{
-    [[vk::location(0)]] float3 varying : COLOR0;
+    [[vk::location(0)]] float4 varying : COLOR0;
     float4 position : SV_Position;
 };
 
 o main (i input){
     o output;
     output.varying = input.colour;
-    output.position = mul(cb, float4(input.position, 0.0, 1.0));
+    output.position = mul(cb, input.position);
     return output;
 }

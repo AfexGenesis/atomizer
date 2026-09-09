@@ -1,5 +1,5 @@
 struct i{
-    [[vk::location(0)]] float3 varying : COLOR0;
+    [[vk::location(0)]] float4 varying : COLOR0;
 };
 
 struct o{
@@ -8,6 +8,6 @@ struct o{
 
 o main(i input){
     o output;
-    output.colour = float4(input.varying, 1.0);
+    output.colour = input.varying;
     return output;
 }
