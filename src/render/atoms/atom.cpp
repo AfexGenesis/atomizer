@@ -15,7 +15,7 @@ void atom::generation(float radius, uint32_t stacks, uint32_t slices, const Dire
         float rr = sinf(phi);
 
         for (uint32_t j = 0; j <=slices; ++j){
-            float theta = DirectX::XM_PI * (float(j) / float(slices));
+            float theta = DirectX::XM_2PI * (float(j) / float(slices));
             float x = rr * cosf(theta);
             float z = rr * sinf(theta);
 
