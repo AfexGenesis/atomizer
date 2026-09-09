@@ -21,7 +21,7 @@ void atom::generation(float radius, uint32_t stacks, uint32_t slices, const Dire
 
             atomertex v;
             v.position = DirectX::XMFLOAT4(x * radius, y * radius, z * radius, 1.0f);
-            v.normal = DirectX::XMFLOAT4(x,y,z,1.0f);
+            v.normal = DirectX::XMFLOAT4(x,y,z,0.0f);
             if(rgb){
                 v.colour = DirectX::XMFLOAT4(x * 0.5f + 0.5f, y * 0.5f + 0.5f, z * 0.5f + 0.5f, 1.0f);
             }else{
