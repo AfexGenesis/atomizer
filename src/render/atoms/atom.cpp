@@ -1,11 +1,11 @@
 
 #include "atom.hpp"
 
-atom::atom(float radius, uint32_t stacks, uint32_t slices, const DirectX::XMFLOAT4 &col, bool rgb){
+atomized::atomized(float radius, uint32_t stacks, uint32_t slices, const DirectX::XMFLOAT4 &col, bool rgb){
     generation(radius, stacks, slices, col, rgb);
 }
 
-void atom::generation(float radius, uint32_t stacks, uint32_t slices, const DirectX::XMFLOAT4 &col, bool rgb){
+void atomized::generation(float radius, uint32_t stacks, uint32_t slices, const DirectX::XMFLOAT4 &col, bool rgb){
     vertices.clear();
     indices.clear();
 

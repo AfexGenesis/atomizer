@@ -6,6 +6,7 @@
 #include "render/window.hpp"
 #include "render/vulkan.hpp"
 #include "core/cif.hpp"
+#include "core/grid.hpp"
 
 int main(int argc, char *argv[]) {
 
@@ -23,10 +24,12 @@ int main(int argc, char *argv[]) {
             }
     }
 
+    grid ag;
     if (!cif.empty()){
         ciff parser;
-        parser.parse(cif);
-        std::println("it worked");
+        std::vector<atom> a = parser.parse(cif);
+        ag.build(std::move(a));
+        std::println("it worked {}", ag.count());
     }else{
         std::println("no cif");
         // return 69;

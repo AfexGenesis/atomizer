@@ -8,21 +8,16 @@
 #include <ranges>
 #include <algorithm>
 #include <unordered_map>
+#include <cstring>
 
-struct ATOM{
-    float x,y,z;
-    int s,m,i;
-    std::string t,o,d;
-};
-
-void ciff::parse(const std::string& cif){
+std::vector<atom> ciff::parse(const std::string& cif){
+    std::vector<atom> a;
     std::ifstream file(cif);
-    if(!file.is_open()) return;
+    if(!file.is_open()) return a;
 
     std::string line;
     int d = -1, s = -1, x = -1, y = -1, z = -1, m = -1, t = -1, i = -1, o = -1;
     int column = 0;
-    int model = 1;
     
     while (std::getline(file, line)){
         if (line.starts_with("loop_")){
@@ -40,31 +35,30 @@ void ciff::parse(const std::string& cif){
             if (line.starts_with("_atom_site.Cartn_z")) z = column;
             if (line.starts_with("_atom_site.pdbx_PDB_model_num")) m = column;
             column++;
-        } if (line.starts_with("ATOM")){
+        } 
+        
+        if (line.starts_with("ATOM")){
             std::stringstream ss(line);
             std::string c;
             std::vector<std::string> r;
-            // std::vector<std::string> v = {m};
-            std::vector<ATOM> a;
-            int nc = 0;
+            
             while (ss >> c){
-                nc++;
                 r.push_back(c);
             }
                     
             int mc = std::max({d,s,x,y,z,m,t,i,o});
-            if (r.size() > mc){
-                        
-                ATOM ca;
-                ca.t = r[t];
+            if ((int)r.size() > mc){
+                atom ca{};
                 ca.i = std::stoi(r[i]);
-                ca.d = r[d];
-                ca.o = r[o];
                 ca.s = std::stoi(r[s]);
                 ca.x = std::stof(r[x]);
                 ca.y = std::stof(r[y]);
                 ca.z = std::stof(r[z]);
-                ca.m = std::stoi(r[m]);
+                
+                ca.m = (m != -1 && (int)r.size() > m) ? std::stoi(r[m]) : 1;
+                if (t != -1) std::strncpy(ca.t, r[t].c_str(), sizeof(ca.t) - 1);
+                if (o != -1) std::strncpy(ca.o, r[o].c_str(), sizeof(ca.o) - 1);
+                if (d != -1) std::strncpy(ca.d, r[d].c_str(), sizeof(ca.d) - 1);
 
                 a.push_back(ca);
             
@@ -93,6 +87,7 @@ void ciff::parse(const std::string& cif){
             }
         }
     }
+    return a;
 }
 
 // side note r = columns & c = rows... 

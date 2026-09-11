@@ -44,6 +44,9 @@ class atomizerer : public QVulkanWindowRenderer {
         uint32_t indexc = 0;
         VkBuffer ibuffer = VK_NULL_HANDLE;
         VkDeviceMemory ibufferm = VK_NULL_HANDLE;
+        VkBuffer atomb = VK_NULL_HANDLE;
+        VkDeviceMemory atomdm = VK_NULL_HANDLE;
+        uint32_t acount = 0;
 
     DirectX::XMVECTOR lightp;
     DirectX::XMFLOAT4X4 projm;

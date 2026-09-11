@@ -64,13 +64,13 @@ void atomizerer::initResources(){
     const VkPhysicalDeviceLimits *pdevicel = &windows->physicalDeviceProperties()->limits;
     const VkDeviceSize uniAlign = pdevicel->minUniformBufferOffsetAlignment;
     qDebug("Debugging on uniAlign %d", (uint) uniAlign);
-    atom atom(1.0f, 64, 64, DirectX::XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f), true);
-    indexc = uint32_t(atom.indi().size());
+    atomized atomized(1.0f, 64, 64, DirectX::XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f), true);
+    indexc = uint32_t(atomized.indi().size());
     VkBufferCreateInfo bufferinfo;
     memset(&bufferinfo, 0, sizeof(bufferinfo));
     bufferinfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
 
-    const VkDeviceSize vallosaurs = atom.verti().size() * sizeof(atomertex);
+    const VkDeviceSize vallosaurs = atomized.verti().size() * sizeof(atomertex);
     const VkDeviceSize uallosaurs = aligned(size, uniAlign);
     bufferinfo.size = vallosaurs + ccf * uallosaurs;
     bufferinfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
@@ -103,7 +103,7 @@ void atomizerer::initResources(){
         qFatal("pointers did not work %d", result);
     }
 
-    memcpy(pointer, atom.verti().data(), atom.verti().size() * sizeof(atomertex));
+    memcpy(pointer, atomized.verti().data(), atomized.verti().size() * sizeof(atomertex));
     DirectX::XMMATRIX id = DirectX::XMMatrixIdentity();
     DirectX::XMFLOAT4X4 data;
     DirectX::XMStoreFloat4x4(&data, id);
@@ -117,7 +117,7 @@ void atomizerer::initResources(){
     }
     devicef->vkUnmapMemory(device, bufferm);
 
-    const VkDeviceSize indexs = atom.indi().size() * sizeof(uint32_t);
+    const VkDeviceSize indexs = atomized.indi().size() * sizeof(uint32_t);
     VkBufferCreateInfo indexb;
     memset(&indexb, 0, sizeof(indexb));
     indexb.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -150,9 +150,9 @@ void atomizerer::initResources(){
     if (result != VK_SUCCESS){
         qFatal("can't map memory find god %d", result);
     }
-    memcpy(ipointer, atom.indi().data(), indexs);
+    memcpy(ipointer, atomized.indi().data(), indexs);
     devicef->vkUnmapMemory(device, ibufferm);
-
+    
     VkVertexInputBindingDescription vertexb ={
         0, sizeof(atomertex), VK_VERTEX_INPUT_RATE_VERTEX
     };
