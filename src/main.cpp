@@ -48,10 +48,7 @@ int main(int argc, char *argv[]) {
         throw std::runtime_error("RUN TIME ERROR ON INSTANCE");
     }
 
-    atomizer *vw = new atomizer(dbg);
-    vw->setVulkanInstance(&instance);
-    
-    atomizer window(vw);
+    atomizer window(ag.all(), dbg);
     window.setVulkanInstance(&instance);
     window.resize(800, 800);
     window.show();

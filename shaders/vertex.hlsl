@@ -5,6 +5,8 @@ cbuffer cb : register(b0, space0){
 struct i{
     [[vk::location(0)]] float4 position : POSITION;
     [[vk::location(1)]] float4 colour : COLOR0;
+    [[vk::location(2)]] float4 iposition : TEXCOORD0;
+    [[vk::location(3)]] float4 icolour : TEXCOORD1;
 };
 
 struct o{
@@ -14,7 +16,8 @@ struct o{
 
 o main (i input){
     o output;
-    output.varying = input.colour;
-    output.position = mul(cb, input.position);
+    output.varying = input.colour * input.icolour;
+    float4 worldpos = float4(input.position.xyz + input.iposition.xyz, 1.0f);
+    output.position = mul(cb, worldpos);
     return output;
 }

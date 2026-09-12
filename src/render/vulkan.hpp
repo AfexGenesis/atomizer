@@ -3,14 +3,16 @@
 #include <QVulkanWindowRenderer>
 #include <DirectXMath.h>
 #include <QMutex>
+#include <vector>
 #include "camera.hpp"
 #include "window.hpp"
 #include "atoms/atom.hpp"
+#include "cif.hpp"
 
 class atomizerer : public QVulkanWindowRenderer {
     public:
 
-    atomizerer(QVulkanWindow *window, bool msaa = false);
+    atomizerer(QVulkanWindow *window, const std::vector<atom> &atoms, bool msaa = false);
     //explicit atomizerer(QVulkanWindow *w) : window(w) {}
     void yaw(float degree);
     void pitch(float degree);
@@ -47,6 +49,7 @@ class atomizerer : public QVulkanWindowRenderer {
         VkBuffer atomb = VK_NULL_HANDLE;
         VkDeviceMemory atomdm = VK_NULL_HANDLE;
         uint32_t acount = 0;
+        std::vector<atom> atoms;
 
     DirectX::XMVECTOR lightp;
     DirectX::XMFLOAT4X4 projm;

@@ -14,7 +14,7 @@ static inline VkDeviceSize aligned(VkDeviceSize v, VkDeviceSize alignByte){
     return (v + alignByte - 1) & ~(alignByte - 1);
 }
 
-atomizerer::atomizerer(QVulkanWindow *window, bool msaa) : windows(window), cam(DirectX::XMFLOAT4(0.0f, 0.0f, -5.0f, 1.0f)){
+atomizerer::atomizerer(QVulkanWindow *window, const std::vector<atom> &atomsis, bool msaa) : windows(window), atoms(atomsis), cam(DirectX::XMFLOAT4(0.0f, 0.0f, -5.0f, 1.0f)){
     if (msaa){
         const QList<int> samples = windows->supportedSampleCounts();
         qDebug() << "debug supported samples" << samples;
@@ -152,9 +152,59 @@ void atomizerer::initResources(){
     }
     memcpy(ipointer, atomized.indi().data(), indexs);
     devicef->vkUnmapMemory(device, ibufferm);
-    
-    VkVertexInputBindingDescription vertexb ={
-        0, sizeof(atomertex), VK_VERTEX_INPUT_RATE_VERTEX
+
+    acount = uint32_t(atoms.size());
+    if (acount > 0){
+        std::vector<insdata> instances;
+        instances.reserve(atoms.size());
+        for (const auto &a : atoms){
+            insdata id;
+            id.position = DirectX::XMFLOAT4(a.x, a.y, a.z, 0.0f);
+            id.colour = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+            id.atomid = uint32_t(a.i);
+            instances.push_back(id);
+        }
+
+        const VkDeviceSize instances_size = instances.size() * sizeof(insdata);
+        VkBufferCreateInfo instanceb;
+        memset(&instanceb, 0, sizeof(instanceb));
+        instanceb.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+        instanceb.size = instances_size;
+        instanceb.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+
+        result = devicef->vkCreateBuffer(device, &instanceb, nullptr, &atomb);
+        if (result != VK_SUCCESS){
+            qFatal("failed at creating the instance buffer %d", result);
+        }
+
+        VkMemoryRequirements instancemri;
+        devicef->vkGetBufferMemoryRequirements(device, atomb, &instancemri);
+        VkMemoryAllocateInfo instancealloc ={
+            VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO, nullptr, instancemri.size, windows->hostVisibleMemoryIndex()
+        };
+
+        result = devicef->vkAllocateMemory(device, &instancealloc, nullptr, &atomdm);
+        if (result != VK_SUCCESS){
+            qFatal("failed to allocate instance memory %d", result);
+        }
+
+        result = devicef->vkBindBufferMemory(device, atomb, atomdm, 0);
+        if (result != VK_SUCCESS){
+            qFatal("failed to bind instance buffer %d", result);
+        }
+
+        quint8 *instancepointer;
+        result = devicef->vkMapMemory(device, atomdm, 0, instances_size, 0, reinterpret_cast<void **> (&instancepointer));
+        if (result != VK_SUCCESS){
+            qFatal("can't map instance memory %d", result);
+        }
+        memcpy(instancepointer, instances.data(), instances_size);
+        devicef->vkUnmapMemory(device, atomdm);
+    }
+
+    VkVertexInputBindingDescription vertexb[] ={
+        { 0, sizeof(atomertex), VK_VERTEX_INPUT_RATE_VERTEX },
+        { 1, sizeof(insdata), VK_VERTEX_INPUT_RATE_INSTANCE }
     };
     VkVertexInputAttributeDescription vertexa[] ={
         {
@@ -162,6 +212,12 @@ void atomizerer::initResources(){
         },
         {
             1, 0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(atomertex, colour)
+        },
+        {
+            2, 1, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(insdata, position)
+        },
+        {
+            3, 1, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(insdata, colour)
         }
     };
 
@@ -169,9 +225,9 @@ void atomizerer::initResources(){
     verstappen.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
     verstappen.pNext = nullptr;
     verstappen.flags = 0;
-    verstappen.vertexBindingDescriptionCount = 1;
-    verstappen.pVertexBindingDescriptions = &vertexb;
-    verstappen.vertexAttributeDescriptionCount = 2;
+    verstappen.vertexBindingDescriptionCount = 2;
+    verstappen.pVertexBindingDescriptions = vertexb;
+    verstappen.vertexAttributeDescriptionCount = 4;
     verstappen.pVertexAttributeDescriptions = vertexa;
 
     VkDescriptorPoolSize pools = {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, uint32_t(ccf)};
@@ -374,6 +430,14 @@ void atomizerer::releaseResources(){
         devicef->vkFreeMemory(device, ibufferm, nullptr);
         ibufferm = VK_NULL_HANDLE;
     }
+    if (atomb){
+        devicef->vkDestroyBuffer(device, atomb, nullptr);
+        atomb = VK_NULL_HANDLE;
+    }
+    if (atomdm){
+        devicef->vkFreeMemory(device, atomdm, nullptr);
+        atomdm = VK_NULL_HANDLE;
+    }
 }
 
 void atomizerer::getMatrices(DirectX::XMFLOAT4X4 *mvp, DirectX::XMFLOAT4X4 *model, DirectX::XMFLOAT4X4 *normalmode, DirectX::XMFLOAT4 *eyep){
@@ -430,9 +494,13 @@ void atomizerer::startNextFrame(){
     devicef->vkCmdBindPipeline(piastry, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelane);
     devicef->vkCmdBindDescriptorSets(piastry, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeout, 0, 1, 
     &layers[windows->currentFrame()], 0, nullptr);
-    VkDeviceSize size = 0;
-    devicef->vkCmdBindVertexBuffers(piastry, 0, 1, &buffer, &size);
-    devicef->vkCmdBindIndexBuffer(piastry, ibuffer, 0, VK_INDEX_TYPE_UINT32);
+
+    if (acount > 0 && atomb){
+        VkBuffer vertexbuffers[] = { buffer, atomb };
+        VkDeviceSize offsets[] = { 0, 0 };
+        devicef->vkCmdBindVertexBuffers(piastry, 0, 2, vertexbuffers, offsets);
+        devicef->vkCmdBindIndexBuffer(piastry, ibuffer, 0, VK_INDEX_TYPE_UINT32);
+    }
     VkViewport vp;
 
     vp.x = vp.y = 0;
@@ -448,7 +516,9 @@ void atomizerer::startNextFrame(){
     rs.extent.height = vp.height;
     devicef->vkCmdSetScissor(piastry, 0, 1, &rs);
 
-    devicef->vkCmdDrawIndexed(piastry, indexc, 1, 0, 0, 0);
+    if (acount > 0 && atomb){
+        devicef->vkCmdDrawIndexed(piastry, indexc, acount, 0, 0, 0);
+    }
     devicef->vkCmdEndRenderPass(commandblock);
     windows->frameReady();
     windows->requestUpdate();
