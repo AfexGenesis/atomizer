@@ -7,8 +7,7 @@ atomizer::atomizer(bool dbg): debug(dbg){}
 atomizer::atomizer(const std::vector<atom> &atomsis, bool dbg): debug(dbg), atoms(atomsis){}
 
 QVulkanWindowRenderer* atomizer::createRenderer(){
-    //return new atomizerer (this, true);
-    windower = new atomizerer(this, atoms, true);
+    windower = new atomizerer(this, atoms);
     return windower;
 };
 

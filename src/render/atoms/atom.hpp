@@ -5,19 +5,17 @@
 
 struct atomertex{
     DirectX::XMFLOAT4 position;
-    DirectX::XMFLOAT4 normal;
     DirectX::XMFLOAT4 colour;
 };
 
 struct insdata{
     DirectX::XMFLOAT4 position;
     DirectX::XMFLOAT4 colour;
-    uint32_t atomid;
 };
 
 class atomized{
     public:
-        atomized(float radius = 1.0f, uint32_t statcks = 64, uint32_t slices = 64,
+        atomized(float radius = 1.0f, uint32_t statcks = 16, uint32_t slices = 16,
             const DirectX::XMFLOAT4 &col = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f),
             bool rgb = true);
         const std::vector<atomertex> &verti() const{

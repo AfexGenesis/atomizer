@@ -24,10 +24,9 @@ class atomizerer : public QVulkanWindowRenderer {
         void initResources() override;
         void releaseResources() override;
         void initSwapChainResources() override;
-        void cleanup();
 
-        void markViewProjDirty() {vpd = windows->concurrentFrameCount();}
-        void getMatrices(DirectX::XMFLOAT4X4 *mvp, DirectX::XMFLOAT4X4 *model, DirectX::XMFLOAT4X4 *normalmode, DirectX::XMFLOAT4 *eyep);
+        void requestFrame() { windows->requestUpdate(); }
+        void getmvp(DirectX::XMFLOAT4X4 *mvp);
         QVulkanWindow *windows;
         QVulkanDeviceFunctions *devicef;
 
@@ -39,7 +38,6 @@ class atomizerer : public QVulkanWindowRenderer {
         VkDescriptorPool pooler = VK_NULL_HANDLE;
         VkDescriptorSetLayout layer = VK_NULL_HANDLE;
         VkDescriptorSet layers[QVulkanWindow::MAX_CONCURRENT_FRAME_COUNT];
-        VkDescriptorSetLayout layout = VK_NULL_HANDLE;
         VkPipelineLayout pipeout = VK_NULL_HANDLE;
         VkPipelineCache pipeche = VK_NULL_HANDLE;
         VkPipeline pipelane = VK_NULL_HANDLE;
@@ -51,9 +49,7 @@ class atomizerer : public QVulkanWindowRenderer {
         uint32_t acount = 0;
         std::vector<atom> atoms;
 
-    DirectX::XMVECTOR lightp;
     DirectX::XMFLOAT4X4 projm;
     camera cam;
     QMutex mutexgui;
-    int vpd = 0;
-};  
+};

@@ -18,7 +18,7 @@ atomizerer::atomizerer(QVulkanWindow *window, const std::vector<atom> &atomsis, 
     if (msaa){
         const QList<int> samples = windows->supportedSampleCounts();
         qDebug() << "debug supported samples" << samples;
-        for (int s = 16; s >= 4; s /= 2){
+        for (int s = 4; s >= 2; s /= 2){
             if(samples.contains(s)){
                 qDebug("debug samples %d", s);
                 windows->setSampleCount(s);
@@ -64,15 +64,16 @@ void atomizerer::initResources(){
     const VkPhysicalDeviceLimits *pdevicel = &windows->physicalDeviceProperties()->limits;
     const VkDeviceSize uniAlign = pdevicel->minUniformBufferOffsetAlignment;
     qDebug("Debugging on uniAlign %d", (uint) uniAlign);
-    atomized atomized(1.0f, 64, 64, DirectX::XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f), true);
+    atomized atomized;
     indexc = uint32_t(atomized.indi().size());
     VkBufferCreateInfo bufferinfo;
     memset(&bufferinfo, 0, sizeof(bufferinfo));
     bufferinfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
 
     const VkDeviceSize vallosaurs = atomized.verti().size() * sizeof(atomertex);
+    const VkDeviceSize uniform = aligned(vallosaurs, uniAlign);
     const VkDeviceSize uallosaurs = aligned(size, uniAlign);
-    bufferinfo.size = vallosaurs + ccf * uallosaurs;
+    bufferinfo.size = uniform + ccf * uallosaurs;
     bufferinfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
 
     VkResult result = devicef->vkCreateBuffer(device, &bufferinfo, nullptr, &buffer);
@@ -109,11 +110,11 @@ void atomizerer::initResources(){
     DirectX::XMStoreFloat4x4(&data, id);
     memset(uallosaursi, 0, sizeof(uallosaursi));
     for(int i = 0; i < ccf; ++i){
-        const VkDeviceSize offset = vallosaurs + i * uallosaurs;
+        const VkDeviceSize offset = uniform + i * uallosaurs;
         memcpy(pointer + offset, &data, sizeof(DirectX::XMFLOAT4X4));
         uallosaursi[i].buffer = buffer;
         uallosaursi[i].offset = offset;
-        uallosaursi[i].range = uallosaurs;
+        uallosaursi[i].range = size;
     }
     devicef->vkUnmapMemory(device, bufferm);
 
@@ -161,7 +162,6 @@ void atomizerer::initResources(){
             insdata id;
             id.position = DirectX::XMFLOAT4(a.x, a.y, a.z, 0.0f);
             id.colour = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
-            id.atomid = uint32_t(a.i);
             instances.push_back(id);
         }
 
@@ -326,8 +326,9 @@ void atomizerer::initResources(){
 
     VkPipelineRasterizationStateCreateInfo georgerussel;
     memset(&georgerussel, 0 , sizeof(georgerussel));
+    georgerussel.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
     georgerussel.polygonMode = VK_POLYGON_MODE_FILL;
-    georgerussel.cullMode = VK_CULL_MODE_NONE;
+    georgerussel.cullMode = VK_CULL_MODE_BACK_BIT;
     georgerussel.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
     georgerussel.lineWidth = 1.0f;
     pipelinec.pRasterizationState = &georgerussel;
@@ -350,6 +351,7 @@ void atomizerer::initResources(){
     VkPipelineColorBlendAttachmentState lando;
     memset(&piastri, 0, sizeof(piastri));
     memset(&lando, 0, sizeof(lando));
+    piastri.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
     lando.colorWriteMask = 0xF;
     piastri.attachmentCount = 1;
     piastri.pAttachments = &lando;
@@ -387,7 +389,6 @@ void atomizerer::initSwapChainResources(){
 
     projectiled.m[1][1] *= -1.0f;
     projm = projectiled;
-    markViewProjDirty();
 }
 
 void atomizerer::releaseResources(){
@@ -400,15 +401,15 @@ void atomizerer::releaseResources(){
     }
     if (pipeche){
         devicef->vkDestroyPipelineCache(device, pipeche, nullptr);
-        pipelane = VK_NULL_HANDLE;
+        pipeche = VK_NULL_HANDLE;
     }
     if (pipeout){
         devicef->vkDestroyPipelineLayout(device, pipeout, nullptr);
         pipeout = VK_NULL_HANDLE;
     }
-    if (layout){
-        devicef->vkDestroyDescriptorSetLayout(device, layout, nullptr);
-        layout = VK_NULL_HANDLE;
+    if (layer){
+        devicef->vkDestroyDescriptorSetLayout(device, layer, nullptr);
+        layer = VK_NULL_HANDLE;
     }
     if (pooler){
         devicef->vkDestroyDescriptorPool(device, pooler, nullptr);
@@ -440,18 +441,14 @@ void atomizerer::releaseResources(){
     }
 }
 
-void atomizerer::getMatrices(DirectX::XMFLOAT4X4 *mvp, DirectX::XMFLOAT4X4 *model, DirectX::XMFLOAT4X4 *normalmode, DirectX::XMFLOAT4 *eyep){
+void atomizerer::getmvp(DirectX::XMFLOAT4X4 *mvp){
+    QMutexLocker locker(&mutexgui);
     DirectX::XMMATRIX m = DirectX::XMMatrixIdentity();
-    DirectX::XMStoreFloat4x4(model, m);
-    DirectX::XMMATRIX normalm = DirectX::XMMatrixTranspose(DirectX::XMMatrixInverse(nullptr, m));
-    DirectX::XMStoreFloat4x4(normalmode, normalm);
     DirectX::XMFLOAT4X4 viewf = cam.matrix();
     DirectX::XMMATRIX view = DirectX::XMLoadFloat4x4(&viewf);
     DirectX::XMMATRIX proj = DirectX::XMLoadFloat4x4(&projm);
     DirectX::XMMATRIX mvpm = DirectX::XMMatrixMultiply(DirectX::XMMatrixMultiply(m, view), proj);
     DirectX::XMStoreFloat4x4(mvp, mvpm);
-    DirectX::XMMATRIX inview = DirectX::XMMatrixInverse(nullptr, view);
-    DirectX::XMStoreFloat4(eyep, inview.r[3]);
 }
 
 void atomizerer::startNextFrame(){
@@ -484,9 +481,8 @@ void atomizerer::startNextFrame(){
         qFatal("no pointer of the quint8 secondary weapon %d", result);
     }
 
-    DirectX::XMFLOAT4X4 mvp, model, normalmode;
-    DirectX::XMFLOAT4 eyep;
-    getMatrices(&mvp, &model, &normalmode, &eyep);
+    DirectX::XMFLOAT4X4 mvp;
+    getmvp(&mvp);
     memcpy(pointer, &mvp, sizeof(DirectX::XMFLOAT4X4));
 
     devicef->vkUnmapMemory(device, bufferm);
@@ -521,29 +517,28 @@ void atomizerer::startNextFrame(){
     }
     devicef->vkCmdEndRenderPass(commandblock);
     windows->frameReady();
-    windows->requestUpdate();
 }
 
 void atomizerer::yaw(float degrees){
     QMutexLocker locker(&mutexgui);
     cam.yaw(degrees);
-    markViewProjDirty();
+    requestFrame();
 }
 
 void atomizerer::pitch(float degrees){
     QMutexLocker locker(&mutexgui);
     cam.pitch(degrees);
-    markViewProjDirty();
+    requestFrame();
 }
 
 void atomizerer::walk(float amount){
     QMutexLocker locker(&mutexgui);
     cam.walk(amount);
-    markViewProjDirty();
+    requestFrame();
 }
 
 void atomizerer::strafe(float amount){
     QMutexLocker locker(&mutexgui);
     cam.strafe(amount);
-    markViewProjDirty();
+    requestFrame();
 }
