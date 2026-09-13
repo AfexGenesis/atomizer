@@ -26,7 +26,12 @@ class atomizerer : public QVulkanWindowRenderer {
         void initSwapChainResources() override;
 
         void requestFrame() { windows->requestUpdate(); }
-        void getmvp(DirectX::XMFLOAT4X4 *mvp);
+        struct renderuniforms {
+            DirectX::XMFLOAT4X4 view;
+            DirectX::XMFLOAT4X4 projection;
+        };
+
+        void getUniforms(renderuniforms *uniforms);
         QVulkanWindow *windows;
         QVulkanDeviceFunctions *devicef;
 

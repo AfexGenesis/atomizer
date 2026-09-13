@@ -8,7 +8,7 @@
 
 using namespace DirectX;
 
-static const int size = sizeof(DirectX::XMFLOAT4X4);
+static const int size = 2 * sizeof(DirectX::XMFLOAT4X4);
 
 static inline VkDeviceSize aligned(VkDeviceSize v, VkDeviceSize alignByte){
     return (v + alignByte - 1) & ~(alignByte - 1);
@@ -106,8 +106,9 @@ void atomizerer::initResources(){
 
     memcpy(pointer, atomized.verti().data(), atomized.verti().size() * sizeof(atomertex));
     DirectX::XMMATRIX id = DirectX::XMMatrixIdentity();
-    DirectX::XMFLOAT4X4 data;
-    DirectX::XMStoreFloat4x4(&data, id);
+    renderuniforms data;
+    DirectX::XMStoreFloat4x4(&data.view, id);
+    DirectX::XMStoreFloat4x4(&data.projection, id);
     memset(uallosaursi, 0, sizeof(uallosaursi));
     for(int i = 0; i < ccf; ++i){
         const VkDeviceSize offset = uniform + i * uallosaurs;
@@ -160,7 +161,7 @@ void atomizerer::initResources(){
         instances.reserve(atoms.size());
         for (const auto &a : atoms){
             insdata id;
-            id.position = DirectX::XMFLOAT4(a.x, a.y, a.z, 0.0f);
+            id.position = DirectX::XMFLOAT4(a.x, a.y, a.z, 1.0f);
             id.colour = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
             instances.push_back(id);
         }
@@ -208,16 +209,13 @@ void atomizerer::initResources(){
     };
     VkVertexInputAttributeDescription vertexa[] ={
         {
-            0, 0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(atomertex, position)
+            0, 0, VK_FORMAT_R32G32_SFLOAT, offsetof(atomertex, corner)
         },
         {
-            1, 0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(atomertex, colour)
+            1, 1, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(insdata, position)
         },
         {
-            2, 1, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(insdata, position)
-        },
-        {
-            3, 1, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(insdata, colour)
+            2, 1, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(insdata, colour)
         }
     };
 
@@ -227,7 +225,7 @@ void atomizerer::initResources(){
     verstappen.flags = 0;
     verstappen.vertexBindingDescriptionCount = 2;
     verstappen.pVertexBindingDescriptions = vertexb;
-    verstappen.vertexAttributeDescriptionCount = 4;
+    verstappen.vertexAttributeDescriptionCount = 3;
     verstappen.pVertexAttributeDescriptions = vertexa;
 
     VkDescriptorPoolSize pools = {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, uint32_t(ccf)};
@@ -243,7 +241,8 @@ void atomizerer::initResources(){
     }
 
     VkDescriptorSetLayoutBinding layout ={
-        0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT, nullptr
+        0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1,
+        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, nullptr
     };
     VkDescriptorSetLayoutCreateInfo layoutb ={
         VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO, nullptr, 0, 1,  &layout
@@ -328,7 +327,7 @@ void atomizerer::initResources(){
     memset(&georgerussel, 0 , sizeof(georgerussel));
     georgerussel.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
     georgerussel.polygonMode = VK_POLYGON_MODE_FILL;
-    georgerussel.cullMode = VK_CULL_MODE_BACK_BIT;
+    georgerussel.cullMode = VK_CULL_MODE_NONE;
     georgerussel.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
     georgerussel.lineWidth = 1.0f;
     pipelinec.pRasterizationState = &georgerussel;
@@ -441,14 +440,10 @@ void atomizerer::releaseResources(){
     }
 }
 
-void atomizerer::getmvp(DirectX::XMFLOAT4X4 *mvp){
+void atomizerer::getUniforms(renderuniforms *uniforms){
     QMutexLocker locker(&mutexgui);
-    DirectX::XMMATRIX m = DirectX::XMMatrixIdentity();
-    DirectX::XMFLOAT4X4 viewf = cam.matrix();
-    DirectX::XMMATRIX view = DirectX::XMLoadFloat4x4(&viewf);
-    DirectX::XMMATRIX proj = DirectX::XMLoadFloat4x4(&projm);
-    DirectX::XMMATRIX mvpm = DirectX::XMMatrixMultiply(DirectX::XMMatrixMultiply(m, view), proj);
-    DirectX::XMStoreFloat4x4(mvp, mvpm);
+    uniforms->view = cam.matrix();
+    uniforms->projection = projm;
 }
 
 void atomizerer::startNextFrame(){
@@ -481,9 +476,9 @@ void atomizerer::startNextFrame(){
         qFatal("no pointer of the quint8 secondary weapon %d", result);
     }
 
-    DirectX::XMFLOAT4X4 mvp;
-    getmvp(&mvp);
-    memcpy(pointer, &mvp, sizeof(DirectX::XMFLOAT4X4));
+    renderuniforms uniforms;
+    getUniforms(&uniforms);
+    memcpy(pointer, &uniforms, sizeof(renderuniforms));
 
     devicef->vkUnmapMemory(device, bufferm);
 
