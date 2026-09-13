@@ -2,6 +2,9 @@
 #include <QtTypes>
 #include <QVulkanDeviceFunctions>
 #include <vulkan/vulkan.h>
+#include <algorithm>
+#include <cmath>
+#include <limits>
 #include <print>
 #include <DirectXMath.h>
 #include "vulkan.hpp"
@@ -15,6 +18,42 @@ static inline VkDeviceSize aligned(VkDeviceSize v, VkDeviceSize alignByte){
 }
 
 atomizerer::atomizerer(QVulkanWindow *window, const std::vector<atom> &atomsis, bool msaa) : windows(window), atoms(atomsis), cam(DirectX::XMFLOAT4(0.0f, 0.0f, -5.0f, 1.0f)){
+    if (!atoms.empty()){
+        DirectX::XMFLOAT3 minimum(
+            std::numeric_limits<float>::max(),
+            std::numeric_limits<float>::max(),
+            std::numeric_limits<float>::max()
+        );
+        DirectX::XMFLOAT3 maximum(
+            std::numeric_limits<float>::lowest(),
+            std::numeric_limits<float>::lowest(),
+            std::numeric_limits<float>::lowest()
+        );
+        for (const auto &a : atoms){
+            minimum.x = std::min(minimum.x, a.x);
+            minimum.y = std::min(minimum.y, a.y);
+            minimum.z = std::min(minimum.z, a.z);
+            maximum.x = std::max(maximum.x, a.x);
+            maximum.y = std::max(maximum.y, a.y);
+            maximum.z = std::max(maximum.z, a.z);
+        }
+
+        const DirectX::XMFLOAT3 center(
+            (minimum.x + maximum.x) * 0.5f,
+            (minimum.y + maximum.y) * 0.5f,
+            (minimum.z + maximum.z) * 0.5f
+        );
+        const float halfx = (maximum.x - minimum.x) * 0.5f + 1.0f;
+        const float halfy = (maximum.y - minimum.y) * 0.5f + 1.0f;
+        const float halfz = (maximum.z - minimum.z) * 0.5f + 1.0f;
+        const float sceneRadius = std::sqrt(halfx * halfx + halfy * halfy + halfz * halfz);
+        const float cameraDistance = std::max(sceneRadius * 1.6f, 5.0f);
+
+        cam.setPosition(DirectX::XMFLOAT4(center.x, center.y, center.z - cameraDistance, 1.0f));
+        movspeed = std::max(sceneRadius * 0.5f, 2.5f);
+        farplane = std::max(sceneRadius * 12.0f, 100.0f);
+    }
+
     if (msaa){
         const QList<int> samples = windows->supportedSampleCounts();
         qDebug() << "debug supported samples" << samples;
@@ -382,7 +421,7 @@ void atomizerer::initResources(){
 void atomizerer::initSwapChainResources(){
     const QSize qsize = windows->swapChainImageSize();
     const float aspect = qsize.height() ? qsize.width() / (float) qsize.height() : 1.0f;
-    DirectX::XMMATRIX projectile = DirectX::XMMatrixPerspectiveFovLH(DirectX::XM_PIDIV2, aspect, 0.01f, 100.0f);
+    DirectX::XMMATRIX projectile = DirectX::XMMatrixPerspectiveFovLH(DirectX::XM_PIDIV2, aspect, 0.01f, farplane);
     DirectX::XMFLOAT4X4 projectiled;
     DirectX::XMStoreFloat4x4(&projectiled, projectile);
 
@@ -514,26 +553,27 @@ void atomizerer::startNextFrame(){
     windows->frameReady();
 }
 
-void atomizerer::yaw(float degrees){
-    QMutexLocker locker(&mutexgui);
-    cam.yaw(degrees);
+void atomizerer::look(float ydelta, float pdelta){
+    {
+        QMutexLocker locker(&mutexgui);
+        cam.look(ydelta, pdelta);
+    }
     requestFrame();
 }
 
-void atomizerer::pitch(float degrees){
-    QMutexLocker locker(&mutexgui);
-    cam.pitch(degrees);
-    requestFrame();
-}
-
-void atomizerer::walk(float amount){
-    QMutexLocker locker(&mutexgui);
-    cam.walk(amount);
-    requestFrame();
-}
-
-void atomizerer::strafe(float amount){
-    QMutexLocker locker(&mutexgui);
-    cam.strafe(amount);
+void atomizerer::move(float famount, float samount, float vamount, float seconds, bool fast){
+    const float distance = movspeed * seconds * (fast ? 4.0f : 1.0f);
+    const float dirlength = std::sqrt(
+        famount * famount + samount * samount + vamount * vamount
+    );
+    if (dirlength > 0.0f){
+        famount /= dirlength;
+        samount /= dirlength;
+        vamount /= dirlength;
+    }
+    {
+        QMutexLocker locker(&mutexgui);
+        cam.move(famount * distance, samount * distance, vamount * distance);
+    }
     requestFrame();
 }

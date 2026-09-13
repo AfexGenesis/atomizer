@@ -1,4 +1,7 @@
 #pragma once
+#include <QElapsedTimer>
+#include <QSet>
+#include <QTimer>
 #include <QVulkanWindow>
 #include <vector>
 #include "cif.hpp"
@@ -19,9 +22,16 @@ class atomizer : public QVulkanWindow{
     void mouseReleaseEvent(QMouseEvent *e) override;
     void mouseMoveEvent(QMouseEvent *e) override;
     void keyPressEvent(QKeyEvent *e) override;
+    void keyReleaseEvent(QKeyEvent *e) override;
+    void focusOutEvent(QFocusEvent *e) override;
+    void updateMovement();
+    bool isMovementKey(int key) const;
     
     bool debug;
-    atomizerer *windower;
-    bool pressed = false;
+    atomizerer *windower = nullptr;
+    bool looking = false;
     QPoint lp;
+    QSet<int> pressedkey;
+    QTimer movtimer;
+    QElapsedTimer movclock;
 };

@@ -4,20 +4,18 @@ class camera {
     public:
     camera(const DirectX::XMFLOAT4 &p);
 
-    void yaw(float degree);
-    void pitch(float degree);
-    void walk(float amount);
-    void strafe(float amount);
+    void setPosition(const DirectX::XMFLOAT4 &p);
+    void look(float ydelta, float pdelta);
+    void move(float famount, float ramount, float uamount);
     DirectX::XMFLOAT4X4 matrix() const;
 
     private:
-    DirectX::XMFLOAT4 fribes;
-    DirectX::XMFLOAT4 sides;
-    DirectX::XMFLOAT4 vertical;
-    DirectX::XMFLOAT4 position;
-    float yaws;
-    float pitchs;
+    void updateBasis();
 
-    DirectX::XMFLOAT4X4 yawm;
-    DirectX::XMFLOAT4X4 pitchm;
+    DirectX::XMFLOAT4 forward;
+    DirectX::XMFLOAT4 right;
+    DirectX::XMFLOAT4 up;
+    DirectX::XMFLOAT4 position;
+    float yangle;
+    float pangle;
 };

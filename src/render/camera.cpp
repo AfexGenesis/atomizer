@@ -1,76 +1,64 @@
+#include <algorithm>
+#include <cmath>
 #include "camera.hpp"
 
 camera::camera(const DirectX::XMFLOAT4 &p):
-    fribes(0.0f, 0.0f, -1.0f, 0.0f),
-    sides(1.0f, 0.0f, 0.0f, 0.0f),
-    vertical(0.0f, 1.0f, 0.0f, 0.0f),
+    forward(0.0f, 0.0f, 1.0f, 0.0f),
+    right(1.0f, 0.0f, 0.0f, 0.0f),
+    up(0.0f, 1.0f, 0.0f, 0.0f),
     position(p.x, p.y, p.z, 1.0f),
-    yaws(0.0f),
-    pitchs(0.0f)
+    yangle(0.0f),
+    pangle(0.0f)
 {
-    DirectX::XMStoreFloat4x4(&yawm, DirectX::XMMatrixIdentity());
-    DirectX::XMStoreFloat4x4(&pitchm, DirectX::XMMatrixIdentity());
+    updateBasis();
 }
 
-static inline void clamp360(float *v){
-    if (*v > DirectX::XM_2PI) *v -= DirectX::XM_2PI;
-    if (*v < -DirectX::XM_2PI) *v += DirectX::XM_2PI;
+void camera::setPosition(const DirectX::XMFLOAT4 &p){
+    position = DirectX::XMFLOAT4(p.x, p.y, p.z, 1.0f);
 }
 
-void camera::yaw(float degree){
-    yaws += (degree);
-    clamp360(&yaws);
-
-    DirectX::XMMATRIX pm = DirectX::XMLoadFloat4x4(&pitchm);
-    DirectX::XMMATRIX ym = DirectX::XMMatrixRotationY(yaws);
-    DirectX::XMStoreFloat4x4(&yawm, ym);
-    DirectX::XMMATRIX rm = DirectX::XMMatrixMultiply(pm, ym);
-
-    DirectX::XMVECTOR qfribes = DirectX::XMVectorSet(0.0f, 0.0f, -1.0f, 0.0);
-    DirectX::XMVECTOR qsides = DirectX::XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f);
-    DirectX::XMVECTOR wfribes = DirectX::XMVector4Transform(qfribes, rm);
-    DirectX::XMVECTOR wsides = DirectX::XMVector4Transform(qsides, rm);
-
-    DirectX::XMStoreFloat4(&fribes, wfribes);
-    DirectX::XMStoreFloat4(&sides, wsides);
+void camera::look(float ydelta, float pdelta){
+    yangle = std::remainder(yangle + ydelta, DirectX::XM_2PI);
+    constexpr float plimit = DirectX::XM_PIDIV2 - 0.01f;
+    pangle = std::clamp(pangle + pdelta, -plimit, plimit);
+    updateBasis();
 }
 
-void camera::pitch(float degree){
-    pitchs +=(degree);
-    clamp360(&pitchs);
+void camera::updateBasis(){
+    const float cosp = std::cos(pangle);
+    forward = DirectX::XMFLOAT4(
+        std::sin(yangle) * cosp,
+        std::sin(pangle),
+        std::cos(yangle) * cosp,
+        0.0f
+    );
 
-    DirectX::XMMATRIX pmm = DirectX::XMLoadFloat4x4(&yawm);
-    DirectX::XMMATRIX ymm = DirectX::XMMatrixRotationX(pitchs);
-    DirectX::XMStoreFloat4x4(&pitchm, ymm);
-    DirectX::XMMATRIX rmm = DirectX::XMMatrixMultiply(pmm, ymm);
-
-    DirectX::XMVECTOR qqfribes = DirectX::XMVectorSet(0.0f, 0.0f, -1.0f, 0.0f);
-    DirectX::XMVECTOR qvertical = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f); 
-    DirectX::XMVECTOR wwfribes = DirectX::XMVector4Transform(qqfribes, ymm);
-    DirectX::XMVECTOR wvertical = DirectX::XMVector4Transform(qvertical, rmm);
-
-    DirectX::XMStoreFloat4(&fribes, wwfribes);
-    DirectX::XMStoreFloat4(&sides, wvertical);
+    DirectX::XMVECTOR top = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+    DirectX::XMVECTOR fvector = DirectX::XMLoadFloat4(&forward);
+    DirectX::XMVECTOR svector = DirectX::XMVector3Normalize(
+        DirectX::XMVector3Cross(top, fvector)
+    );
+    DirectX::XMVECTOR vvector = DirectX::XMVector3Normalize(
+        DirectX::XMVector3Cross(fvector, svector)
+    );
+    DirectX::XMStoreFloat4(&right, svector);
+    DirectX::XMStoreFloat4(&up, vvector);
 }
 
-void camera::walk(float amount){
-    position.x += amount * fribes.x;
-    position.z += amount * fribes.z;
-}
-
-void camera::strafe(float amount){
-    position.x += amount * sides.x;
-    position.z += amount * sides.z;
+void camera::move(float famount, float samount, float uamount){
+    position.x += famount * forward.x + samount * right.x;
+    position.y += famount * forward.y + samount * right.y + uamount;
+    position.z += famount * forward.z + samount * right.z;
 }
 
 DirectX::XMFLOAT4X4 camera::matrix() const{
-    DirectX::XMMATRIX pmmm = DirectX::XMLoadFloat4x4(&pitchm);
-    DirectX::XMMATRIX ymmm = DirectX::XMLoadFloat4x4(&yawm);
-    DirectX::XMMATRIX rmmm = DirectX::XMMatrixMultiply(pmmm, ymmm);
-    DirectX::XMMATRIX tm = DirectX::XMMatrixTranslation(-position.x, -position.y, -position.z);
-    DirectX::XMMATRIX v = DirectX::XMMatrixMultiply(tm, rmmm);
+    DirectX::XMMATRIX view = DirectX::XMMatrixLookToLH(
+        DirectX::XMLoadFloat4(&position),
+        DirectX::XMLoadFloat4(&forward),
+        DirectX::XMLoadFloat4(&up)
+    );
 
     DirectX::XMFLOAT4X4 result;
-    DirectX::XMStoreFloat4x4(&result, v);
+    DirectX::XMStoreFloat4x4(&result, view);
     return result;
 }

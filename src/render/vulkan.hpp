@@ -14,10 +14,8 @@ class atomizerer : public QVulkanWindowRenderer {
 
     atomizerer(QVulkanWindow *window, const std::vector<atom> &atoms, bool msaa = false);
     //explicit atomizerer(QVulkanWindow *w) : window(w) {}
-    void yaw(float degree);
-    void pitch(float degree);
-    void walk(float amount);
-    void strafe(float amount);
+    void look(float ydelta, float pdelta);
+    void move(float famount, float samount, float vamount, float seconds, bool fast);
 
     private: 
         void startNextFrame() override;
@@ -53,6 +51,8 @@ class atomizerer : public QVulkanWindowRenderer {
         VkDeviceMemory atomdm = VK_NULL_HANDLE;
         uint32_t acount = 0;
         std::vector<atom> atoms;
+        float movspeed = 5.0f;
+        float farplane = 100.0f;
 
     DirectX::XMFLOAT4X4 projm;
     camera cam;
