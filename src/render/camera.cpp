@@ -62,3 +62,16 @@ DirectX::XMFLOAT4X4 camera::matrix() const{
     DirectX::XMStoreFloat4x4(&result, view);
     return result;
 }
+
+void camera::ray(float x, float y, float aspect, float origin[3], float direction[3]) const{
+    origin[0] = position.x;
+    origin[1] = position.y;
+    origin[2] = position.z;
+    const float dx = forward.x + right.x*x*aspect + up.x*y;
+    const float dy = forward.y + right.y*x*aspect + up.y*y;
+    const float dz = forward.z + right.z*x*aspect + up.z*y;
+    const float length = std::sqrt(dx*dx + dy*dy + dz*dz);
+    direction[0] = dx/length;
+    direction[1] = dy/length;
+    direction[2] = dz/length;
+}

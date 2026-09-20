@@ -1,6 +1,8 @@
 #pragma once
 #include <vector>
 #include <cstdint>
+#include "cif.hpp"
+#include "molecule/topology.hpp"
 #include <DirectXMath.h>
 
 struct atomertex{
@@ -10,6 +12,7 @@ struct atomertex{
 struct insdata{
     DirectX::XMFLOAT4 position;
     DirectX::XMFLOAT4 colour;
+    DirectX::XMFLOAT4 end;
 };
 
 class atomized{
@@ -26,3 +29,6 @@ class atomized{
         std::vector<atomertex> vertices;
         std::vector<uint32_t> indices;
 };
+
+std::vector<insdata> make_atom_instances(const std::vector<atom> &atoms, bool spacefill);
+std::vector<insdata> makebondinstances(const std::vector<atom> &atoms, const std::vector<bond> &bonds);

@@ -4,10 +4,13 @@
 #include <vulkan/vulkan.h>
 #include <algorithm>
 #include <cmath>
+#include <cstring>
 #include <limits>
 #include <print>
 #include <DirectXMath.h>
 #include "vulkan.hpp"
+#include "atom/atominfo.hpp"
+#include "atoms/atomselect.hpp"
 
 using namespace DirectX;
 
@@ -17,7 +20,11 @@ static inline VkDeviceSize aligned(VkDeviceSize v, VkDeviceSize alignByte){
     return (v + alignByte - 1) & ~(alignByte - 1);
 }
 
-atomizerer::atomizerer(QVulkanWindow *window, const std::vector<atom> &atomsis, bool msaa) : windows(window), atoms(atomsis), cam(DirectX::XMFLOAT4(0.0f, 0.0f, -5.0f, 1.0f)){
+atomizerer::atomizerer(QVulkanWindow *window, const std::vector<atom> &atomsis,
+                       const std::vector<segment> &segments, const std::vector<bond> &bondsis,
+                       bool msaa) : windows(window), atoms(atomsis), bonds(bondsis),
+                       model(mmodel(atomsis, segments)),
+                       cam(DirectX::XMFLOAT4(0.0f, 0.0f, -5.0f, 1.0f)){
     if (!atoms.empty()){
         DirectX::XMFLOAT3 minimum(
             std::numeric_limits<float>::max(),
@@ -46,12 +53,12 @@ atomizerer::atomizerer(QVulkanWindow *window, const std::vector<atom> &atomsis, 
         const float halfx = (maximum.x - minimum.x) * 0.5f + 1.0f;
         const float halfy = (maximum.y - minimum.y) * 0.5f + 1.0f;
         const float halfz = (maximum.z - minimum.z) * 0.5f + 1.0f;
-        const float sceneRadius = std::sqrt(halfx * halfx + halfy * halfy + halfz * halfz);
-        const float cameraDistance = std::max(sceneRadius * 1.6f, 5.0f);
+        const float sceneradius = std::sqrt(halfx * halfx + halfy * halfy + halfz * halfz);
+        const float cameradistance = std::max(sceneradius * 1.6f, 5.0f);
 
-        cam.setPosition(DirectX::XMFLOAT4(center.x, center.y, center.z - cameraDistance, 1.0f));
-        movspeed = std::max(sceneRadius * 0.5f, 2.5f);
-        farplane = std::max(sceneRadius * 12.0f, 100.0f);
+        cam.setPosition(DirectX::XMFLOAT4(center.x, center.y, center.z - cameradistance, 1.0f));
+        movspeed = std::max(sceneradius * 0.5f, 2.5f);
+        farplane = std::max(sceneradius * 12.0f, 100.0f);
     }
 
     if (msaa){
@@ -92,7 +99,33 @@ VkShaderModule atomizerer::createShader(const QString &sildursshader){
         return VK_NULL_HANDLE;
     }
     return shadurModule;
+
+}
+
+void atomizerer::createHostBuffer(VkBuffer &target, VkDeviceMemory &memory, VkBufferUsageFlags usage, const void *data, VkDeviceSize bytes){
+    VkDevice device = windows->device();
+    VkBufferCreateInfo info{};
+    info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    info.size = bytes;
+    info.usage = usage;
+    VkResult result = devicef->vkCreateBuffer(device, &info, nullptr, &target);
     
+    if (result != VK_SUCCESS) qFatal("model buffer creation failed %d", result);
+    VkMemoryRequirements requirements;
+    devicef->vkGetBufferMemoryRequirements(device, target, &requirements);
+    VkMemoryAllocateInfo allocation{VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO, nullptr, requirements.size, windows->hostVisibleMemoryIndex()};
+
+    result = devicef->vkAllocateMemory(device, &allocation, nullptr, &memory);
+    if (result != VK_SUCCESS) qFatal("model memory allocation failed %d", result);
+    result = devicef->vkBindBufferMemory(device, target, memory, 0);
+
+    if (result != VK_SUCCESS) qFatal("model buffer binding failed %d", result);
+    void *mapped = nullptr;
+    result = devicef->vkMapMemory(device, memory, 0, bytes, 0, &mapped);
+
+    if (result != VK_SUCCESS) qFatal("model memory mapping failed %d", result);
+    if (data) memcpy(mapped, data, bytes);
+    devicef->vkUnmapMemory(device, memory);
 }
 
 void atomizerer::initResources(){
@@ -196,14 +229,13 @@ void atomizerer::initResources(){
 
     acount = uint32_t(atoms.size());
     if (acount > 0){
-        std::vector<insdata> instances;
-        instances.reserve(atoms.size());
-        for (const auto &a : atoms){
-            insdata id;
-            id.position = DirectX::XMFLOAT4(a.x, a.y, a.z, 1.0f);
-            id.colour = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
-            instances.push_back(id);
-        }
+        std::vector<insdata> instances = make_atom_instances(atoms, false);
+        auto spacefill = make_atom_instances(atoms, true);
+        auto links = makebondinstances(atoms, bonds);
+        bcount = uint32_t(links.size());
+        instances.insert(instances.end(), spacefill.begin(), spacefill.end());
+        instances.insert(instances.end(), links.begin(), links.end());
+        qDebug("atoms: %u, bond halves: %u", acount, bcount);
 
         const VkDeviceSize instances_size = instances.size() * sizeof(insdata);
         VkBufferCreateInfo instanceb;
@@ -240,6 +272,18 @@ void atomizerer::initResources(){
         }
         memcpy(instancepointer, instances.data(), instances_size);
         devicef->vkUnmapMemory(device, atomdm);
+        overlaystride = aligned(VkDeviceSize(acount + bcount)*sizeof(insdata), 256);
+        createHostBuffer(overlayb, overlaym, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+                         nullptr, overlaystride*ccf);
+    }
+
+    modelcount = static_cast<uint32_t>(model.indices.size());
+    if (modelcount > 0){
+        createHostBuffer(modelv, modelvm, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+                         model.vertices.data(), model.vertices.size() * sizeof(modelvertex));
+        createHostBuffer(modeli, modelim, VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+                         model.indices.data(), model.indices.size() * sizeof(uint32_t));
+        qDebug("model vertices: %zu, triangles: %u", model.vertices.size(), modelcount / 3);
     }
 
     VkVertexInputBindingDescription vertexb[] ={
@@ -255,6 +299,9 @@ void atomizerer::initResources(){
         },
         {
             2, 1, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(insdata, colour)
+        },
+        {
+            3, 1, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(insdata, end)
         }
     };
 
@@ -264,7 +311,7 @@ void atomizerer::initResources(){
     verstappen.flags = 0;
     verstappen.vertexBindingDescriptionCount = 2;
     verstappen.pVertexBindingDescriptions = vertexb;
-    verstappen.vertexAttributeDescriptionCount = 3;
+    verstappen.vertexAttributeDescriptionCount = 4;
     verstappen.pVertexAttributeDescriptions = vertexa;
 
     VkDescriptorPoolSize pools = {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, uint32_t(ccf)};
@@ -409,6 +456,34 @@ void atomizerer::initResources(){
     if (result != VK_SUCCESS){
         qFatal("no graphic pipeline for u %d", result);
     }
+    if (modelcount > 0){
+        VkShaderModule modelvert = createShader(QStringLiteral("../shaders/modelvertex.spv"));
+        VkShaderModule modelfrag = createShader(QStringLiteral("../shaders/modelfragment.spv"));
+        VkPipelineShaderStageCreateInfo modelshaders[2] = {
+            {VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0,
+             VK_SHADER_STAGE_VERTEX_BIT, modelvert, "main", nullptr},
+            {VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0,
+             VK_SHADER_STAGE_FRAGMENT_BIT, modelfrag, "main", nullptr}
+        };
+        VkVertexInputBindingDescription modelbinding{0, sizeof(modelvertex), VK_VERTEX_INPUT_RATE_VERTEX};
+        VkVertexInputAttributeDescription modelactoress [] = {
+            {0, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(modelvertex, position)},
+            {1, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(modelvertex, normal)},
+            {2, 0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(modelvertex, colour)}
+        };
+        VkPipelineVertexInputStateCreateInfo modelinput{};
+        modelinput.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+        modelinput.vertexBindingDescriptionCount = 1;
+        modelinput.pVertexBindingDescriptions = &modelbinding;
+        modelinput.vertexAttributeDescriptionCount = 3;
+        modelinput.pVertexAttributeDescriptions = modelactoress ;
+        pipelinec.pStages = modelshaders;
+        pipelinec.pVertexInputState = &modelinput;
+        result = devicef->vkCreateGraphicsPipelines(device, pipeche, 1, &pipelinec, nullptr, &modelpipe);
+        if (result != VK_SUCCESS) qFatal("model graphics pipeline failed %d", result);
+        devicef->vkDestroyShaderModule(device, modelvert, nullptr);
+        devicef->vkDestroyShaderModule(device, modelfrag, nullptr);
+    }
     if (minecraft){
         devicef->vkDestroyShaderModule(device, minecraft, nullptr);
     }
@@ -433,6 +508,16 @@ void atomizerer::releaseResources(){
     qDebug("releaseResources");
 
     VkDevice device = windows->device();
+    if (modelpipe){
+        devicef->vkDestroyPipeline(device, modelpipe, nullptr);
+        modelpipe = VK_NULL_HANDLE;
+    }
+    if (modelv){ devicef->vkDestroyBuffer(device, modelv, nullptr); modelv = VK_NULL_HANDLE; }
+    if (modelvm){ devicef->vkFreeMemory(device, modelvm, nullptr); modelvm = VK_NULL_HANDLE; }
+    if (modeli){ devicef->vkDestroyBuffer(device, modeli, nullptr); modeli = VK_NULL_HANDLE; }
+    if (modelim){ devicef->vkFreeMemory(device, modelim, nullptr); modelim = VK_NULL_HANDLE; }
+    if (overlayb){ devicef->vkDestroyBuffer(device, overlayb, nullptr); overlayb = VK_NULL_HANDLE; }
+    if (overlaym){ devicef->vkFreeMemory(device, overlaym, nullptr); overlaym = VK_NULL_HANDLE; }
     if (pipelane){
         devicef->vkDestroyPipeline(device, pipelane, nullptr);
         pipelane = VK_NULL_HANDLE;
@@ -525,12 +610,6 @@ void atomizerer::startNextFrame(){
     devicef->vkCmdBindDescriptorSets(piastry, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeout, 0, 1, 
     &layers[windows->currentFrame()], 0, nullptr);
 
-    if (acount > 0 && atomb){
-        VkBuffer vertexbuffers[] = { buffer, atomb };
-        VkDeviceSize offsets[] = { 0, 0 };
-        devicef->vkCmdBindVertexBuffers(piastry, 0, 2, vertexbuffers, offsets);
-        devicef->vkCmdBindIndexBuffer(piastry, ibuffer, 0, VK_INDEX_TYPE_UINT32);
-    }
     VkViewport vp;
 
     vp.x = vp.y = 0;
@@ -546,8 +625,57 @@ void atomizerer::startNextFrame(){
     rs.extent.height = vp.height;
     devicef->vkCmdSetScissor(piastry, 0, 1, &rs);
 
-    if (acount > 0 && atomb){
-        devicef->vkCmdDrawIndexed(piastry, indexc, acount, 0, 0, 0);
+    int cmode;
+    int cpiece;
+    std::vector<insdata> frameoverlay;
+    {
+        QMutexLocker locker(&mutexgui);
+        cmode = mode;
+        cpiece = selected_piece;
+        if (cmode == 4) frameoverlay = overlay;
+    }
+    if (cmode == 4 && modelcount > 0 && modelpipe){
+        devicef->vkCmdBindPipeline(piastry, VK_PIPELINE_BIND_POINT_GRAPHICS, modelpipe);
+        VkDeviceSize offset = 0;
+        devicef->vkCmdBindVertexBuffers(piastry, 0, 1, &modelv, &offset);
+        devicef->vkCmdBindIndexBuffer(piastry, modeli, 0, VK_INDEX_TYPE_UINT32);
+        if (cpiece >= 0 && cpiece < static_cast<int>(model.pieces.size()) &&
+            model.pieces[cpiece].type != shape::coil){
+            const auto &piece = model.pieces[cpiece];
+            if (piece.firstindex > 0)
+                devicef->vkCmdDrawIndexed(piastry, piece.firstindex, 1, 0, 0, 0);
+            const uint32_t next = piece.firstindex + piece.countindex;
+            if (next < modelcount)
+                devicef->vkCmdDrawIndexed(piastry, modelcount-next, 1, next, 0, 0);
+        }else{
+            devicef->vkCmdDrawIndexed(piastry, modelcount, 1, 0, 0, 0);
+        }
+        if (!frameoverlay.empty() && overlayb){
+            const VkDeviceSize bytes = frameoverlay.size()*sizeof(insdata);
+            if (bytes <= overlaystride){
+                const VkDeviceSize offset = windows->currentFrame()*overlaystride;
+                void *mapped = nullptr;
+                VkResult result = devicef->vkMapMemory(device, overlaym, offset, bytes, 0, &mapped);
+                if (result != VK_SUCCESS) qFatal("overlay map failed %d", result);
+                memcpy(mapped, frameoverlay.data(), bytes);
+                devicef->vkUnmapMemory(device, overlaym);
+                devicef->vkCmdBindPipeline(piastry, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelane);
+                VkBuffer vertexbuffers[] = {buffer, overlayb};
+                VkDeviceSize offsets[] = {0, offset};
+                devicef->vkCmdBindVertexBuffers(piastry, 0, 2, vertexbuffers, offsets);
+                devicef->vkCmdBindIndexBuffer(piastry, ibuffer, 0, VK_INDEX_TYPE_UINT32);
+                devicef->vkCmdDrawIndexed(piastry, indexc, static_cast<uint32_t>(frameoverlay.size()), 0, 0, 0);
+            }
+        }
+    }else if (acount > 0 && atomb){
+        VkBuffer vertexbuffers[] = { buffer, atomb };
+        VkDeviceSize offsets[] = { 0, 0 };
+        devicef->vkCmdBindVertexBuffers(piastry, 0, 2, vertexbuffers, offsets);
+        devicef->vkCmdBindIndexBuffer(piastry, ibuffer, 0, VK_INDEX_TYPE_UINT32);
+        const uint32_t first = cmode == 2 ? acount : 0;
+        devicef->vkCmdDrawIndexed(piastry, indexc, acount, 0, 0, first);
+        if (cmode == 1 && bcount > 0)
+            devicef->vkCmdDrawIndexed(piastry, indexc, bcount, 0, 0, acount * 2);
     }
     devicef->vkCmdEndRenderPass(commandblock);
     windows->frameReady();
@@ -557,6 +685,103 @@ void atomizerer::look(float ydelta, float pdelta){
     {
         QMutexLocker locker(&mutexgui);
         cam.look(ydelta, pdelta);
+    }
+    requestFrame();
+}
+
+void atomizerer::setMode(int value){
+    if (value < 1 || value > 4) return;
+    {
+        QMutexLocker locker(&mutexgui);
+        mode = value;
+    }
+    requestFrame();
+}
+
+void atomizerer::pick(int x, int y, int width, int height){
+    if (width <= 0 || height <= 0) return;
+    float origin[3], direction[3];
+    int cmode;
+    {
+        QMutexLocker locker(&mutexgui);
+        cmode = mode;
+        const float nx = 2.0f * (x+0.5f) / width - 1.0f;
+        const float ny = 1.0f - 2.0f * (y+0.5f)/height;
+        cam.ray(nx, ny, float(width) / height, origin, direction);
+    }
+
+    if (cmode != 4){
+        const atomhit hit = patom(atoms, origin, direction, cmode == 2);
+        if (hit.index >= 0){
+            const std::string details = atomdescription(atoms[hit.index]);
+            qInfo().noquote() << QString::fromStdString(details);
+            windows->setTitle(QString::fromStdString(details));
+        }else{
+            windows->setTitle(QStringLiteral("Atomizer"));
+        }
+        return;
+    }
+    if (model.pieces.empty()) return;
+
+    const modelhit hit = pmodel(model, origin, direction);
+    std::vector<insdata> nextoverlay;
+    if (hit.piece >= 0){
+        const auto &piece = model.pieces[hit.piece];
+        int first = piece.firstresidue;
+        int last = piece.lastresidue;
+        if (piece.type == shape::coil){
+            float nearest = std::numeric_limits<float>::max();
+            int center = first;
+            for (const auto &a : atoms){
+                if (std::strcmp(a.chain, piece.chain.c_str()) != 0 ||
+                    a.s < first || a.s > last || std::strcmp(a.d, "CA") != 0) continue;
+                const float dx = a.x-hit.position[0], dy = a.y-hit.position[1], dz = a.z-hit.position[2];
+                const float distance = dx*dx+dy*dy+dz*dz;
+                if (distance < nearest){ nearest = distance; center = a.s; }
+            }
+            first = std::max(first, center-2);
+            last = std::min(last, center+2);
+        }
+
+        std::vector<atom> nearby;
+        std::vector<int> remap(atoms.size(), -1);
+        for (size_t i = 0; i < atoms.size(); ++i){
+            const atom &a = atoms[i];
+            if (std::strcmp(a.chain, piece.chain.c_str()) == 0 && a.s >= first && a.s <= last &&
+                std::strcmp(a.t, "ATOM") == 0){
+                remap[i] = static_cast<int>(nearby.size());
+                nearby.push_back(a);
+            }
+        }
+
+        std::vector<bond> nearbonds;
+        for (const bond &item : bonds){
+            if (item.first >= remap.size() || item.second >= remap.size()) continue;
+            const int firstatom = remap[item.first];
+            const int secondatom = remap[item.second];
+            if (firstatom < 0 || secondatom < 0) continue;
+            nearbonds.push_back({static_cast<uint32_t>(firstatom),
+                                 static_cast<uint32_t>(secondatom), item.order});
+        }
+
+        nextoverlay = make_atom_instances(nearby, false);
+        auto links = makebondinstances(nearby, nearbonds);
+        nextoverlay.insert(nextoverlay.end(), links.begin(), links.end());
+    }
+    {
+        QMutexLocker locker(&mutexgui);
+        if (hit.piece == selected_piece){
+            selected_piece = -1;
+            overlay.clear();
+        }else{
+            selected_piece = hit.piece;
+            overlay = std::move(nextoverlay);
+        }
+        if (selected_piece >= 0){
+            const auto &piece = model.pieces[selected_piece];
+            qDebug("selected chain %s, residues %d-%d", piece.chain.c_str(),
+                   piece.firstresidue, piece.lastresidue);
+        }
     }
     requestFrame();
 }

@@ -10,12 +10,15 @@ atomizer::atomizer(bool dbg): debug(dbg){
     connect(&movtimer, &QTimer::timeout, this, &atomizer::updateMovement);
 }
 
-atomizer::atomizer(const std::vector<atom> &atomsis, bool dbg): atomizer(dbg){
+atomizer::atomizer(const std::vector<atom> &atomsis, const std::vector<segment> &segmentsis,
+                   const std::vector<bond> &bondsis, bool dbg): atomizer(dbg){
     atoms = atomsis;
+    segments = segmentsis;
+    bonds = bondsis;
 }
 
 QVulkanWindowRenderer* atomizer::createRenderer(){
-    windower = new atomizerer(this, atoms);
+    windower = new atomizerer(this, atoms, segments, bonds);
     return windower;
 };
 
@@ -24,6 +27,9 @@ void atomizer::mousePressEvent(QMouseEvent *e){
     if (e->button() == Qt::RightButton){
         looking = true;
         lp = e->position().toPoint();
+        e->accept();
+    }else if (e->button() == Qt::LeftButton && windower){
+        windower->pick(e->position().toPoint().x(), e->position().toPoint().y(), width(), height());
         e->accept();
     }
 }
@@ -48,6 +54,11 @@ void atomizer::mouseMoveEvent(QMouseEvent *e){
 }
 
 void atomizer::keyPressEvent(QKeyEvent *e){
+    if (windower && e->key() >= Qt::Key_1 && e->key() <= Qt::Key_4){
+        windower->setMode(e->key() - Qt::Key_0);
+        e->accept();
+        return;
+    }
     if (isMovementKey(e->key())){
         if (!e->isAutoRepeat())
             pressedkey.insert(e->key());

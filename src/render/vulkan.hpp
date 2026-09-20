@@ -8,14 +8,21 @@
 #include "window.hpp"
 #include "atoms/atom.hpp"
 #include "cif.hpp"
+#include "molecule/module.hpp"
+#include "model/model.hpp"
+#include "molecule/topology.hpp"
 
 class atomizerer : public QVulkanWindowRenderer {
     public:
 
-    atomizerer(QVulkanWindow *window, const std::vector<atom> &atoms, bool msaa = false);
+    atomizerer(QVulkanWindow *window, const std::vector<atom> &atoms,
+               const std::vector<segment> &segments, const std::vector<bond> &bonds,
+               bool msaa = false);
     //explicit atomizerer(QVulkanWindow *w) : window(w) {}
     void look(float ydelta, float pdelta);
     void move(float famount, float samount, float vamount, float seconds, bool fast);
+    void setMode(int value);
+    void pick(int x, int y, int width, int height);
 
     private: 
         void startNextFrame() override;
@@ -30,6 +37,7 @@ class atomizerer : public QVulkanWindowRenderer {
         };
 
         void getUniforms(renderuniforms *uniforms);
+        void createHostBuffer(VkBuffer &target, VkDeviceMemory &memory, VkBufferUsageFlags usage, const void *data, VkDeviceSize bytes);
         QVulkanWindow *windows;
         QVulkanDeviceFunctions *devicef;
 
@@ -49,10 +57,25 @@ class atomizerer : public QVulkanWindowRenderer {
         VkDeviceMemory ibufferm = VK_NULL_HANDLE;
         VkBuffer atomb = VK_NULL_HANDLE;
         VkDeviceMemory atomdm = VK_NULL_HANDLE;
+        VkBuffer overlayb = VK_NULL_HANDLE;
+        VkDeviceMemory overlaym = VK_NULL_HANDLE;
+        VkDeviceSize overlaystride = 0;
         uint32_t acount = 0;
+        uint32_t bcount = 0;
+        int mode = 1;
         std::vector<atom> atoms;
+        std::vector<bond> bonds;
+        modelmesh model;
+        std::vector<insdata> overlay;
+        int selected_piece = -1;
         float movspeed = 5.0f;
         float farplane = 100.0f;
+        VkPipeline modelpipe = VK_NULL_HANDLE;
+        VkBuffer modelv = VK_NULL_HANDLE;
+        VkDeviceMemory modelvm = VK_NULL_HANDLE;
+        VkBuffer modeli = VK_NULL_HANDLE;
+        VkDeviceMemory modelim = VK_NULL_HANDLE;
+        uint32_t modelcount = 0;
 
     DirectX::XMFLOAT4X4 projm;
     camera cam;
