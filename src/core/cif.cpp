@@ -7,15 +7,14 @@
 #include <vector>
 
 namespace {
-void copy(char *out, size_t size, const std::string &value){
-    std::strncpy(out, value.c_str(), size - 1);
-}
-
 std::vector<std::string> split(const std::string &line){
     std::vector<std::string> values;
     for (size_t i = 0; i < line.size();){
-        if (std::isspace(static_cast<unsigned char>(line[i]))){ ++i; continue; }
-        if (line[i] == '#' && values.empty()) break;
+        if (std::isspace(static_cast<unsigned char>(line[i]))){
+            ++i;
+            continue;
+        }
+
         std::string value;
         if (line[i] == '\'' || line[i] == '"'){
             const char quote = line[i++];
@@ -28,87 +27,115 @@ std::vector<std::string> split(const std::string &line){
     }
     return values;
 }
+
+std::string value(const std::vector<std::string> &row, int column){
+    return column >= 0 && column < static_cast<int>(row.size()) ? row[column] : "";
 }
 
-std::vector<atom> ciff::parse(const std::string &path){
-    std::vector<atom> atoms;
-    std::ifstream file(path);
-    std::unordered_map<std::string, size_t> columns;
+int number(const std::vector<std::string> &row, int column, int fallback){
+    const std::string text = value(row, column);
+    if (text.empty() || text == "." || text == "?") return fallback;
+    try {
+        return std::stoi(text);
+    }catch (...){
+        return fallback;
+    }
+}
+
+void copy(char *out, size_t size, const std::string &text){
+    std::strncpy(out, text.c_str(), size - 1);
+}
+}
+
+std::vector<atom> ciff::parse(const std::string &cif){
+    std::vector<atom> a;
+    std::ifstream file(cif);
+    if (!file.is_open()) return a;
+
     std::string line;
+    int d = -1, s = -1, as = -1, x = -1, y = -1, z = -1;
+    int m = -1, t = -1, i = -1, o = -1, e = -1, c = -1, l = -1;
+    int column = 0;
+    int first_model = -1;
     bool in_loop = false;
     bool atom_loop = false;
-    int first_model = -1;
     std::unordered_map<std::string, size_t> sites;
 
     while (std::getline(file, line)){
         if (line == "loop_"){
-            columns.clear();
+            d = s = as = x = y = z = m = t = i = o = e = c = l = -1;
+            column = 0;
             in_loop = true;
             atom_loop = false;
             continue;
         }
+
         if (line.starts_with("_")){
-            if (in_loop){
-                auto names = split(line);
-                if (!names.empty()){
-                    columns[names[0]] = columns.size();
-                    atom_loop |= names[0].starts_with("_atom_site.");
-                }
-            }
+            if (!in_loop) continue;
+
+            const auto header = split(line);
+            if (header.empty()) continue;
+            const std::string &name = header[0];
+            if (name.starts_with("_atom_site.")) atom_loop = true;
+            if (name == "_atom_site.group_PDB") t = column;
+            if (name == "_atom_site.id") i = column;
+            if (name == "_atom_site.type_symbol") e = column;
+            if (name == "_atom_site.label_atom_id") d = column;
+            if (name == "_atom_site.label_alt_id") l = column;
+            if (name == "_atom_site.label_comp_id") o = column;
+            if (name == "_atom_site.label_asym_id") c = column;
+            if (name == "_atom_site.label_seq_id") s = column;
+            if (name == "_atom_site.auth_seq_id") as = column;
+            if (name == "_atom_site.Cartn_x") x = column;
+            if (name == "_atom_site.Cartn_y") y = column;
+            if (name == "_atom_site.Cartn_z") z = column;
+            if (name == "_atom_site.pdbx_PDB_model_num") m = column;
+            ++column;
             continue;
         }
+
         if (line.starts_with("#")){
             in_loop = false;
             atom_loop = false;
             continue;
         }
-        if (!atom_loop || !(line.starts_with("ATOM ") || line.starts_with("HETATM "))) continue;
-        auto row = split(line);
-        auto field = [&](const char *name) -> std::string {
-            auto it = columns.find(name);
-            return it != columns.end() && it->second < row.size() ? row[it->second] : "";
-        };
-        auto number = [&](const char *name, int fallback) {
-            auto value = field(name);
-            if (value.empty() || value == "." || value == "?") return fallback;
-            try { return std::stoi(value); } catch (...) { return fallback; }
-        };
-        auto decimal = [&](const char *name, float fallback) {
-            auto value = field(name);
-            if (value.empty() || value == "." || value == "?") return fallback;
-            try { return std::stof(value); } catch (...) { return fallback; }
-        };
-        const int model = number("_atom_site.pdbx_PDB_model_num", 1);
-        if (first_model < 0) first_model = model;
-        if (model != first_model) continue;
-        auto alt = field("_atom_site.label_alt_id");
 
-        atom a;
+        if (!atom_loop || !(line.starts_with("ATOM ") || line.starts_with("HETATM "))) continue;
+
+        const std::vector<std::string> r = split(line);
+        if (x < 0 || y < 0 || z < 0 || x >= static_cast<int>(r.size()) ||
+            y >= static_cast<int>(r.size()) || z >= static_cast<int>(r.size())) continue;
+
+        atom ca{};
         try {
-            a.x = std::stof(field("_atom_site.Cartn_x"));
-            a.y = std::stof(field("_atom_site.Cartn_y"));
-            a.z = std::stof(field("_atom_site.Cartn_z"));
-        } catch (...) { continue; }
-        a.i = number("_atom_site.id", static_cast<int>(atoms.size()) + 1);
-        a.s = number("_atom_site.label_seq_id", number("_atom_site.auth_seq_id", 0));
-        a.m = model;
-        a.occupancy = decimal("_atom_site.occupancy", 1.0f);
-        a.charge = number("_atom_site.pdbx_formal_charge", 0);
-        copy(a.t, sizeof(a.t), field("_atom_site.group_PDB"));
-        copy(a.d, sizeof(a.d), field("_atom_site.label_atom_id"));
-        copy(a.o, sizeof(a.o), field("_atom_site.label_comp_id"));
-        copy(a.element, sizeof(a.element), field("_atom_site.type_symbol"));
-        copy(a.chain, sizeof(a.chain), field("_atom_site.label_asym_id"));
-        copy(a.alt, sizeof(a.alt), alt);
-        const std::string site = std::string(a.chain) + "|" + std::to_string(a.s) + "|" +
-                                 a.o + "|" + a.d;
-        auto found = sites.find(site);
+            ca.x = std::stof(r[x]);
+            ca.y = std::stof(r[y]);
+            ca.z = std::stof(r[z]);
+        }catch (...){
+            continue;
+        }
+
+        ca.m = number(r, m, 1);
+        if (first_model < 0) first_model = ca.m;
+        if (ca.m != first_model) continue;
+
+        ca.i = number(r, i, static_cast<int>(a.size()) + 1);
+        ca.s = number(r, s, number(r, as, 0));
+        copy(ca.t, sizeof(ca.t), value(r, t));
+        copy(ca.o, sizeof(ca.o), value(r, o));
+        copy(ca.d, sizeof(ca.d), value(r, d));
+        copy(ca.element, sizeof(ca.element), value(r, e));
+        copy(ca.chain, sizeof(ca.chain), value(r, c));
+        copy(ca.alt, sizeof(ca.alt), value(r, l));
+
+        const std::string site = std::string(ca.chain) + "|" + std::to_string(ca.s) + "|" + ca.o + "|" + ca.d;
+        const auto found = sites.find(site);
         if (found == sites.end()){
-            sites.emplace(site, atoms.size());
-            atoms.push_back(a);
-        }else if (alt == "A" || alt == "1"){
-            atoms[found->second] = a;
+            sites.emplace(site, a.size());
+            a.push_back(ca);
+        }else if (std::strcmp(ca.alt, "A") == 0 || std::strcmp(ca.alt, "1") == 0){
+            a[found->second] = ca;
         }
     }
-    return atoms;
+    return a;
 }
