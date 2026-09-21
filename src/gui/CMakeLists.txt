@@ -1,4 +1,4 @@
-set(GUI_SOURCES mainwindow.cpp)
+set(GUI_SOURCES mainwindow.cpp mainwindow.ui)
 set(GUI_HEADERS mainwindow.hpp)
 
 add_library(atomizer_gui STATIC ${GUI_SOURCES} ${GUI_HEADERS})

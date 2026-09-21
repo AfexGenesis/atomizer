@@ -1,4 +1,4 @@
-#include <QGuiApplication>
+#include <QApplication>
 #include <QVulkanWindow>
 #include <QLoggingCategory>
 #include <QVulkanInstance>
@@ -43,7 +43,7 @@ int main(int argc, char *argv[]) {
         // return 69;
     }
 
-    QGuiApplication app(argc, argv);
+    QApplication app(argc, argv);
 
     const bool dbg = qEnvironmentVariableIntValue("QT_VK_DEBUG");
     QLoggingCategory::setFilterRules(QStringLiteral("qt.vulkan=true"));
