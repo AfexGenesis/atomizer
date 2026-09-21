@@ -4,9 +4,9 @@
 #include <QTimer>
 #include <QVulkanWindow>
 #include <vector>
-#include "cif.hpp"
-#include "molecule/module.hpp"
-#include "molecule/topology.hpp"
+#include "../core/cif.hpp"
+#include "../core/molecule/module.hpp"
+#include "../core/molecule/topology.hpp"
 
 class atomizerer;
 class atomizer : public QVulkanWindow{

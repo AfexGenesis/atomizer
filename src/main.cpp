@@ -9,6 +9,7 @@
 #include "core/grid.hpp"
 #include "core/molecule/module.hpp"
 #include "core/molecule/topology.hpp"
+#include "gui/mainwindow.hpp"
 
 int main(int argc, char *argv[]) {
 

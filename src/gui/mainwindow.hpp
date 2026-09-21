@@ -6,12 +6,14 @@ namespace Ui{
 }
 class QComboBox;
 class QVulkanWindow;
+class QVulkanInstance;
 
 class mainwindow : public QMainWindow{
     Q_OBJECT
     public:
         explicit mainwindow(QWidget *parent = nullptr);
         ~mainwindow();
+        void setVulkanInstance(QVulkanInstance *instance);
 
     private slots:
         void rendermode (int index);
