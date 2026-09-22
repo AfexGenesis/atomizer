@@ -1,7 +1,7 @@
 #include <algorithm>
 #include <cctype>
 #include <string>
-#include "element.hpp"
+#include "core/atom/element.hpp"
 
 elementstylied style(const atom &a){
     std::string symbol(a.element);

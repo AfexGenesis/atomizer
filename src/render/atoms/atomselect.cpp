@@ -1,5 +1,5 @@
-#include "atomselect.hpp"
-#include "atom/element.hpp"
+#include "render/atoms/atomselect.hpp"
+#include "core/atom/element.hpp"
 #include <cmath>
 #include <limits>
 

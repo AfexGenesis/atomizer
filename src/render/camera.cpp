@@ -1,6 +1,6 @@
 #include <algorithm>
 #include <cmath>
-#include "camera.hpp"
+#include "render/camera.hpp"
 
 camera::camera(const DirectX::XMFLOAT4 &p):
     forward(0.0f, 0.0f, 1.0f, 0.0f),

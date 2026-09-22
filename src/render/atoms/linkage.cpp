@@ -1,6 +1,6 @@
-#include "atom.hpp"
-#include "atom/element.hpp"
-#include "molecule/topology.hpp"
+#include "render/atoms/atom.hpp"
+#include "core/atom/element.hpp"
+#include "core/molecule/topology.hpp"
 #include <cmath>
 
 namespace {

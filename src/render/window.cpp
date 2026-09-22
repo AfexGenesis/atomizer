@@ -2,8 +2,8 @@
 #include <QKeyEvent>
 #include <QMouseEvent>
 #include <algorithm>
-#include "window.hpp"
-#include "vulkan.hpp"
+#include "render/window.hpp"
+#include "render/vulkan.hpp"
 
 atomizer::atomizer(bool dbg): debug(dbg){
     movtimer.setInterval(16);

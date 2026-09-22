@@ -1,8 +1,8 @@
 #pragma once
 #include <vector>
 #include <cstdint>
-#include "cif.hpp"
-#include "molecule/topology.hpp"
+#include "core/cif.hpp"
+#include "core/molecule/topology.hpp"
 #include <DirectXMath.h>
 
 struct atomertex{

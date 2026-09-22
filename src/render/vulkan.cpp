@@ -8,9 +8,9 @@
 #include <limits>
 #include <print>
 #include <DirectXMath.h>
-#include "vulkan.hpp"
-#include "atom/atominfo.hpp"
-#include "atoms/atomselect.hpp"
+#include "render/vulkan.hpp"
+#include "core/atom/atominfo.hpp"
+#include "render/atoms/atomselect.hpp"
 
 using namespace DirectX;
 

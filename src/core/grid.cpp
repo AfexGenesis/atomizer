@@ -1,5 +1,5 @@
 #include <cmath>
-#include "grid.hpp"
+#include "core/grid.hpp"
 
 void grid::build(std::vector<atom> atoms, float size){
     clear();

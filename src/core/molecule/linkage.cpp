@@ -1,5 +1,5 @@
-#include "linkage.hpp"
-#include "../atom/element.hpp"
+#include "core/molecule/linkage.hpp"
+#include "core/atom/element.hpp"
 #include <cmath>
 #include <cstring>
 #include <unordered_map>

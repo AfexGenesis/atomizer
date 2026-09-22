@@ -1,4 +1,4 @@
-#include "cif.hpp"
+#include "core/cif.hpp"
 #include <cctype>
 #include <cstring>
 #include <fstream>

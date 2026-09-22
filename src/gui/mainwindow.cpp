@@ -2,9 +2,9 @@
 #include <QLabel>
 #include <QVBoxLayout>
 
-#include "mainwindow.hpp"
+#include "gui/mainwindow.hpp"
 #include "ui_mainwindow.h"
-#include "../render/window.hpp"
+#include "render/window.hpp"
 
 mainwindow::mainwindow(QWidget *parent) 
     : QMainWindow(parent), gui(new Ui::MainWindow){

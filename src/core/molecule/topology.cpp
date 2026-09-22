@@ -1,6 +1,6 @@
-#include "topology.hpp"
-#include "linkage.hpp"
-#include "template.hpp"
+#include "core/molecule/topology.hpp"
+#include "core/molecule/linkage.hpp"
+#include "core/molecule/template.hpp"
 #include <algorithm>
 #include <cctype>
 #include <cmath>

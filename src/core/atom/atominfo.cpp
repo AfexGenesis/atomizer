@@ -1,4 +1,4 @@
-#include "atominfo.hpp"
+#include "core/atom/atominfo.hpp"
 #include <cstring>
 #include <iomanip>
 #include <sstream>

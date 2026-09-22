@@ -1,5 +1,5 @@
 #pragma once
-#include "cif.hpp"
+#include "core/cif.hpp"
 #include <vector>
 
 struct atomhit {

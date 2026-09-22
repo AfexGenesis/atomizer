@@ -1,6 +1,6 @@
 
-#include "atom.hpp"
-#include "atom/element.hpp"
+#include "render/atoms/atom.hpp"
+#include "core/atom/element.hpp"
 
 atomized::atomized(){
     vertices = {

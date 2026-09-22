@@ -4,13 +4,13 @@
 #include <DirectXMath.h>
 #include <QMutex>
 #include <vector>
-#include "camera.hpp"
-#include "window.hpp"
+#include "render/camera.hpp"
+#include "render/window.hpp"
 #include "atoms/atom.hpp"
-#include "cif.hpp"
-#include "molecule/module.hpp"
-#include "model/model.hpp"
-#include "molecule/topology.hpp"
+#include "core/cif.hpp"
+#include "core/molecule/module.hpp"
+#include "render/model/model.hpp"
+#include "core/molecule/topology.hpp"
 
 class atomizerer : public QVulkanWindowRenderer {
     public:

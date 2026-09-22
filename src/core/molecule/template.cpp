@@ -1,4 +1,4 @@
-#include "template.hpp"
+#include "core/molecule/template.hpp"
 #include <algorithm>
 #include <cctype>
 #include <fstream>

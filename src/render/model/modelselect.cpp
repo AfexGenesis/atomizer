@@ -1,4 +1,4 @@
-#include "model.hpp"
+#include "render/model/model.hpp"
 #include <algorithm>
 #include <cmath>
 #include <limits>
