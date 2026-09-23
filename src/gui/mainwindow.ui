@@ -33,8 +33,17 @@
      <x>0</x>
      <y>0</y>
      <width>782</width>
-     <height>28</height>
+     <height>26</height>
     </rect>
+   </property>
+   <property name="font">
+    <font>
+     <family>Orbitron</family>
+     <pointsize>8</pointsize>
+     <italic>false</italic>
+     <bold>false</bold>
+     <underline>false</underline>
+    </font>
    </property>
    <widget class="QMenu" name="menuFile">
     <property name="title">

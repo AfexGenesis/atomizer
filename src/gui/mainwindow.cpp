@@ -1,6 +1,8 @@
 #include <QComboBox>
 #include <QLabel>
 #include <QVBoxLayout>
+#include <QFont>
+#include <QFontDatabase>
 
 #include "gui/mainwindow.hpp"
 #include "ui_mainwindow.h"
@@ -9,19 +11,21 @@
 mainwindow::mainwindow(QWidget *parent) 
     : QMainWindow(parent), gui(new Ui::MainWindow){
     gui->setupUi(this);
+    QFont orbitron("Orbitron", 10, QFont::Normal);
 
     rendervulkan = new atomizer(true);
     QWidget *vulkanwidget = QWidget::createWindowContainer(rendervulkan, this);
     rendermodec = new QComboBox(this);
-    rendermodec->addItem("Structural");
-    rendermodec->addItem("Balls");
-    rendermodec->addItem("Atoms");
-    rendermodec->addItem("Module");
+    rendermodec->addItem(" Structural ");
+    rendermodec->addItem(" Balls ");
+    rendermodec->addItem(" Atoms ");
+    rendermodec->addItem(" Module ");
 
     QVBoxLayout *layout = new QVBoxLayout(gui->vulkanbg);
     layout->setContentsMargins(0, 0, 0, 0);
     layout->addWidget(vulkanwidget);
-    gui->toolBar->addWidget(new QLabel("View Mode:", this));
+    gui->toolBar->setFont(orbitron);
+    gui->toolBar->addWidget(new QLabel(this));
     gui->toolBar->addWidget(rendermodec);
     connect(rendermodec, &QComboBox::currentIndexChanged, this, &mainwindow::rendermode);
 }

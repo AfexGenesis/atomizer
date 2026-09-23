@@ -16,3 +16,6 @@ find_package(Qt6 REQUIRED COMPONENTS Core Widgets Gui)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 add_subdirectory(src)
 add_subdirectory(shaders)
+qt_add_resources(atomizer "atomizer_resources" PREFIX "/" FILES 
+resources/fonts/orbitron-regular.ttf
+resources/fonts/inter-24pt-regular.ttf)

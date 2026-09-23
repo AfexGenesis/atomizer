@@ -2,6 +2,8 @@
 #include <QVulkanWindow>
 #include <QLoggingCategory>
 #include <QVulkanInstance>
+#include <QFontDatabase>
+#include <QFont>
 #include <print>
 #include "render/window.hpp"
 #include "render/vulkan.hpp"
@@ -45,6 +47,8 @@ int main(int argc, char *argv[]) {
     }
 
     QApplication app(argc, argv);
+
+    QFontDatabase::addApplicationFont(":/resources/fonts/orbitron-regular.ttf");
 
     const bool dbg = qEnvironmentVariableIntValue("QT_VK_DEBUG");
     QLoggingCategory::setFilterRules(QStringLiteral("qt.vulkan=true"));
