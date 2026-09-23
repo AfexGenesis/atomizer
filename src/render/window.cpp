@@ -54,6 +54,7 @@ void atomizer::mouseMoveEvent(QMouseEvent *e){
 }
 
 void atomizer::keyPressEvent(QKeyEvent *e){
+    qDebug() << "key " << e->key();
     if (windower){
         switch (e->key()){
             case Qt::Key_1: windower->setMode(1);

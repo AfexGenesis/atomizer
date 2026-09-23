@@ -16,8 +16,12 @@ mainwindow::mainwindow(const std::vector<atom> &atoms, const std::vector<segment
     QFont orbitron("Orbitron", 10, QFont::Normal);
 
     rendervulkan = new atomizer(atoms, segments,bonds, dbg);
-    QWidget *vulkanwidget = QWidget::createWindowContainer(rendervulkan, this);
+    vulkanwidget = QWidget::createWindowContainer(rendervulkan, this);
+
+    vulkanwidget->setFocusPolicy(Qt::StrongFocus);
+    vulkanwidget->installEventFilter(this);
     rendermodec = new QComboBox(this);
+    rendermodec->setFocusPolicy(Qt::NoFocus);
     rendermodec->addItem(" Structural ");
     rendermodec->addItem(" Balls ");
     rendermodec->addItem(" Atoms ");
@@ -26,12 +30,27 @@ mainwindow::mainwindow(const std::vector<atom> &atoms, const std::vector<segment
     QVBoxLayout *layout = new QVBoxLayout(gui->vulkanbg);
     layout->setContentsMargins(0, 0, 0, 0);
     layout->addWidget(vulkanwidget);
+    vulkanwidget->setFocusPolicy(Qt::StrongFocus);
+    vulkanwidget->setFocus();
     gui->toolBar->setFont(orbitron);
     gui->toolBar->addWidget(new QLabel(this));
     gui->toolBar->addWidget(rendermodec);
     connect(rendermodec, &QComboBox::currentIndexChanged, this, &mainwindow::rendermode);
 }
 
+bool mainwindow::eventFilter(QObject *arena, QEvent *event)
+{
+    if (arena == vulkanwidget) {
+        if (event->type() == QEvent::KeyPress ||
+            event->type() == QEvent::KeyRelease) {
+
+            QCoreApplication::sendEvent(rendervulkan, event);
+            return true;
+        }
+    }
+
+    return QMainWindow::eventFilter(arena, event);
+}
 
 mainwindow::~mainwindow(){
     delete gui;
@@ -44,7 +63,7 @@ void mainwindow::rendermode(int index){
     QCoreApplication::sendEvent(rendervulkan, &press);
     QCoreApplication::sendEvent(rendervulkan, &release);
 
-    rendervulkan->requestActivate();
+    vulkanwidget->setFocus(Qt::MouseFocusReason);
 }
 
 void mainwindow::setVulkanInstance(QVulkanInstance *instance) {

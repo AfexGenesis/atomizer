@@ -22,8 +22,12 @@ class mainwindow : public QMainWindow{
     private slots:
         void rendermode (int index);
 
+    protected:
+        bool eventFilter(QObject *arena, QEvent *event) override;
+
     private:
         Ui::MainWindow * gui;
         QComboBox *rendermodec{nullptr};
-        QVulkanWindow *rendervulkan{nullptr};
+        atomizer *rendervulkan{nullptr};
+        QWidget *vulkanwidget{nullptr};
 };
