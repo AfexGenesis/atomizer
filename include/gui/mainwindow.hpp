@@ -1,5 +1,7 @@
 #pragma once 
 #include <QMainWindow>
+#include <QWidget>
+#include <render/window.hpp>
 
 namespace Ui{
     class MainWindow;
@@ -7,11 +9,13 @@ namespace Ui{
 class QComboBox;
 class QVulkanWindow;
 class QVulkanInstance;
+class atomizer;
 
 class mainwindow : public QMainWindow{
     Q_OBJECT
     public:
-        explicit mainwindow(QWidget *parent = nullptr);
+        explicit mainwindow(const std::vector<atom> &atoms, const std::vector<segment> &segments,
+             const std::vector<bond> &bonds, bool dbg, QWidget *parent = nullptr);
         ~mainwindow();
         void setVulkanInstance(QVulkanInstance *instance);
 

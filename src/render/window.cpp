@@ -54,11 +54,36 @@ void atomizer::mouseMoveEvent(QMouseEvent *e){
 }
 
 void atomizer::keyPressEvent(QKeyEvent *e){
+    if (windower){
+        switch (e->key()){
+            case Qt::Key_1: windower->setMode(1);
+            e->accept();
+            return;
+
+            case Qt::Key_2: windower->setMode(2);
+            e->accept();
+            return;
+
+            case Qt::Key_3: windower->setMode(3);
+            e->accept();
+            return;
+
+            case Qt::Key_4: windower->setMode(4);
+            e->accept();
+            return;
+            
+            default:
+            break;
+        }
+    }
+
+    /* changed from this to my way of understanding qt
     if (windower && e->key() >= Qt::Key_1 && e->key() <= Qt::Key_4){
         windower->setMode(e->key() - Qt::Key_0);
         e->accept();
         return;
     }
+    */
     if (isMovementKey(e->key())){
         if (!e->isAutoRepeat())
             pressedkey.insert(e->key());
@@ -69,6 +94,7 @@ void atomizer::keyPressEvent(QKeyEvent *e){
         e->accept();
         return;
     }
+    
     QVulkanWindow::keyPressEvent(e);
 }
 
@@ -100,19 +126,19 @@ void atomizer::updateMovement(){
         return;
 
     const float seconds = std::min(movclock.restart() / 1000.0f, 0.05f);
-    const float forwardAmount = float(pressedkey.contains(Qt::Key_W)) - float(pressedkey.contains(Qt::Key_S));
-    const float rightAmount = float(pressedkey.contains(Qt::Key_D)) - float(pressedkey.contains(Qt::Key_A));
-    const float upAmount = float(pressedkey.contains(Qt::Key_V)) - float(pressedkey.contains(Qt::Key_C));
+    const float fribesamount = float(pressedkey.contains(Qt::Key_W)) - float(pressedkey.contains(Qt::Key_S));
+    const float sideamount = float(pressedkey.contains(Qt::Key_D)) - float(pressedkey.contains(Qt::Key_A));
+    const float verticalamount = float(pressedkey.contains(Qt::Key_V)) - float(pressedkey.contains(Qt::Key_C));
 
-    if (forwardAmount == 0.0f && rightAmount == 0.0f && upAmount == 0.0f){
+    if (fribesamount == 0.0f && sideamount == 0.0f && verticalamount == 0.0f){
         movtimer.stop();
         return;
     }
 
     windower->move(
-        forwardAmount,
-        rightAmount,
-        upAmount,
+        fribesamount,
+        sideamount,
+        verticalamount,
         seconds,
         pressedkey.contains(Qt::Key_Shift)
     );

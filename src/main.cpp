@@ -61,10 +61,10 @@ int main(int argc, char *argv[]) {
         throw std::runtime_error("RUN TIME ERROR ON INSTANCE");
     }
 
-    mainwindow rendervulkan;
-    rendervulkan.setVulkanInstance(&instance);
-    rendervulkan.resize(800, 800);
-    rendervulkan.show();
+    mainwindow atomizer(ag.all(), segments, chemistry.bonds, dbg);
+    atomizer.setVulkanInstance(&instance);
+    atomizer.resize(800, 800);
+    atomizer.show();
 
     return app.exec();
 }
