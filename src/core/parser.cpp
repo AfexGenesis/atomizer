@@ -16,6 +16,8 @@ moleculedata molecarser(const std::string &path){
     topology chemistry = readtopology(path, a);
     data.bonds = std::move(chemistry.bonds);
     ag.build(std::move(a));
+    data.atoms = ag.all();
+    data.valid = true;
     std::println("loaded {} atoms and {} bonds", ag.count(), chemistry.bonds.size());
     std::println("bond sources: {} component, {} structure, {} fallback", chemistry.templatecount, chemistry.connectioncount, chemistry.inferredcount);
     return data;
