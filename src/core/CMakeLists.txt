@@ -1,4 +1,4 @@
-set(CORE_SOURCES memory.cpp pipeline.cpp cif.cpp grid.cpp)
+set(CORE_SOURCES memory.cpp pipeline.cpp cif.cpp grid.cpp parser.cpp)
 
 add_subdirectory(atom)
 add_subdirectory(molecule)

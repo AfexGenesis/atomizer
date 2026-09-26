@@ -11,4 +11,4 @@ struct segment {
     shape type = shape::coil;
 };
 
-std::vector<segment> read_secondary(const std::string &path);
+std::vector<segment> readmodule(const std::string &path);

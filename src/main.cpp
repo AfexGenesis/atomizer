@@ -12,6 +12,7 @@
 #include "core/molecule/module.hpp"
 #include "core/molecule/topology.hpp"
 #include "gui/mainwindow.hpp"
+#include "core/parser.hpp"
 
 int main(int argc, char *argv[]) {
 
@@ -29,18 +30,9 @@ int main(int argc, char *argv[]) {
             }
     }
 
-    grid ag;
-    std::vector<segment> segments;
-    topology chemistry;
+    moleculedata active;
     if (!cif.empty()){
-        ciff parser;
-        std::vector<atom> a = parser.parse(cif);
-        segments = read_secondary(cif);
-        chemistry = readtopology(cif, a);
-        ag.build(std::move(a));
-        std::println("loaded {} atoms and {} bonds", ag.count(), chemistry.bonds.size());
-        std::println("bond sources: {} component, {} structure, {} fallback",
-                     chemistry.templatecount, chemistry.connectioncount, chemistry.inferredcount);
+        active = molecarser(cif);
     }else{
         std::println("no cif");
         // return 69;
@@ -61,7 +53,7 @@ int main(int argc, char *argv[]) {
         throw std::runtime_error("RUN TIME ERROR ON INSTANCE");
     }
 
-    mainwindow atomizer(ag.all(), segments, chemistry.bonds, dbg);
+    mainwindow atomizer(active.atoms, active.segments, active.bonds, dbg);
     atomizer.setVulkanInstance(&instance);
     atomizer.resize(800, 800);
     atomizer.show();

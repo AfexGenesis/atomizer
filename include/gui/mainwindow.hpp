@@ -1,6 +1,7 @@
 #pragma once 
 #include <QMainWindow>
 #include <QWidget>
+#include <QString>
 #include <render/window.hpp>
 
 namespace Ui{
@@ -10,6 +11,7 @@ class QComboBox;
 class QVulkanWindow;
 class QVulkanInstance;
 class atomizer;
+class QVBoxLayout;
 
 class mainwindow : public QMainWindow{
     Q_OBJECT
@@ -21,6 +23,7 @@ class mainwindow : public QMainWindow{
 
     private slots:
         void rendermode (int index);
+        void openfile();
 
     protected:
         bool eventFilter(QObject *arena, QEvent *event) override;

@@ -1,4 +1,4 @@
-set(CORE_HEADERS cif.hpp grid.hpp)
+set(CORE_HEADERS cif.hpp grid.hpp parser.hpp)
 
 add_subdirectory(atom)
 add_subdirectory(molecule)

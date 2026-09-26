@@ -24,7 +24,7 @@ namespace {
     }
 }
 
-std::vector<segment> read_secondary(const std::string &path){
+std::vector<segment> readmodule(const std::string &path){
     std::vector<segment> segments;
     std::ifstream file(path);
     std::unordered_map<std::string, size_t> columns;
