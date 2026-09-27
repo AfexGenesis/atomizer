@@ -25,30 +25,23 @@ void camera::look(float ydelta, float pdelta){
 }
 
 void camera::updateBasis(){
-    const float cosp = std::cos(pangle);
-    forward = DirectX::XMFLOAT4(
-        std::sin(yangle) * cosp,
-        std::sin(pangle),
-        std::cos(yangle) * cosp,
-        0.0f
-    );
+    float sinyaw, cosyaw, sinpitch, cospitch;
+    DirectX::XMScalarSinCos(&sinyaw,&cosyaw,yangle);
+    DirectX::XMScalarSinCos(&sinpitch,&cospitch,pangle);
+    forward = DirectX::XMFLOAT4(sinyaw * cospitch, sinpitch, cosyaw * cospitch, 0.0f);
 
     DirectX::XMVECTOR top = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
     DirectX::XMVECTOR fvector = DirectX::XMLoadFloat4(&forward);
-    DirectX::XMVECTOR svector = DirectX::XMVector3Normalize(
-        DirectX::XMVector3Cross(top, fvector)
-    );
-    DirectX::XMVECTOR vvector = DirectX::XMVector3Normalize(
-        DirectX::XMVector3Cross(fvector, svector)
-    );
+    DirectX::XMVECTOR svector = DirectX::XMVector3Normalize(DirectX::XMVector3Cross(top, fvector));
+    DirectX::XMVECTOR vvector = DirectX::XMVector3Normalize(DirectX::XMVector3Cross(fvector, svector));
     DirectX::XMStoreFloat4(&right, svector);
     DirectX::XMStoreFloat4(&up, vvector);
 }
 
 void camera::move(float famount, float samount, float uamount){
-    position.x += famount * forward.x + samount * right.x;
-    position.y += famount * forward.y + samount * right.y + uamount;
-    position.z += famount * forward.z + samount * right.z;
+    const DirectX::XMVECTOR delta = DirectX::XMLoadFloat4(&forward) * famount + DirectX::XMLoadFloat4(&right)
+    * samount + DirectX::XMVectorSet(0.0f, uamount,0.0f, 0.0f);
+    DirectX::XMStoreFloat4(&position,DirectX::XMLoadFloat4(&position) + delta);
 }
 
 DirectX::XMFLOAT4X4 camera::matrix() const{
@@ -63,15 +56,9 @@ DirectX::XMFLOAT4X4 camera::matrix() const{
     return result;
 }
 
-void camera::ray(float x, float y, float aspect, float origin[3], float direction[3]) const{
-    origin[0] = position.x;
-    origin[1] = position.y;
-    origin[2] = position.z;
-    const float dx = forward.x + right.x*x*aspect + up.x*y;
-    const float dy = forward.y + right.y*x*aspect + up.y*y;
-    const float dz = forward.z + right.z*x*aspect + up.z*y;
-    const float length = std::sqrt(dx*dx + dy*dy + dz*dz);
-    direction[0] = dx/length;
-    direction[1] = dy/length;
-    direction[2] = dz/length;
+void camera::ray(float x, float y, float aspect, DirectX::XMFLOAT4 &origin, DirectX::XMFLOAT4 &direction) const{
+    origin = position;
+    DirectX::XMVECTOR raydir = DirectX::XMLoadFloat4(&forward) + DirectX::XMLoadFloat4(&right)
+    * (x * aspect) + DirectX::XMLoadFloat4(&up) * y;
+    DirectX::XMStoreFloat4(&direction, DirectX::XMVector3Normalize(raydir));
 }

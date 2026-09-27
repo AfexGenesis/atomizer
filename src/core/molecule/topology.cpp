@@ -7,6 +7,7 @@
 #include <cstring>
 #include <fstream>
 #include <unordered_map>
+#include <DirectXMath.h>
 
 namespace {
 struct connection {
@@ -95,10 +96,9 @@ std::string sitekey(const std::string &chain, int seq, const std::string &comp, 
 }
 
 float distance2(const atom &first, const atom &second){
-    const float x = first.x - second.x;
-    const float y = first.y - second.y;
-    const float z = first.z - second.z;
-    return x*x + y*y + z*z;
+    const DirectX::XMVECTOR firstpos = DirectX::XMVectorSet(first.x,first.y,first.z,1.0f);
+    const DirectX::XMVECTOR secondpos = DirectX::XMVectorSet(second.x,second.y,second.z,1.0f);
+    return DirectX::XMVectorGetX(DirectX::XMVector3LengthSq(firstpos-secondpos));
 }
 
 }

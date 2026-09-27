@@ -1,13 +1,15 @@
 #pragma once
 #include "../../core/cif.hpp"
 #include "../../core/molecule/module.hpp"
+#include <algorithm>
+#include <DirectXMath.h>
 #include <cstdint>
 #include <vector>
 
 struct modelvertex {
-    float position[3];
-    float normal[3];
-    float colour[4];
+    DirectX::XMFLOAT4 position;
+    DirectX::XMFLOAT4 normal;
+    DirectX::XMFLOAT4 colour;
 };
 
 struct modelpiece {
@@ -18,8 +20,8 @@ struct modelpiece {
     int firstresidue = 0;
     int lastresidue = 0;
     shape type = shape::coil;
-    float minimum[3] = {};
-    float maximum[3] = {};
+    DirectX::XMFLOAT4 minimum = {};
+    DirectX::XMFLOAT4 maximum = {};
 };
 
 struct modelmesh {
@@ -30,8 +32,8 @@ struct modelmesh {
 
 struct modelhit {
     int piece = -1;
-    float position[3] = {};
+    DirectX::XMFLOAT4 position = {};
 };
 
 modelmesh mmodel(const std::vector<atom> &atoms, const std::vector<segment> &segments);
-modelhit pmodel(const modelmesh &mesh, const float origin[3], const float direction[3]);
+modelhit pmodel(const modelmesh &mesh, const DirectX::XMFLOAT4 &origin, const DirectX::XMFLOAT4 &direction);

@@ -26,15 +26,17 @@ atomizerer::atomizerer(QVulkanWindow *window, const std::vector<atom> &atomsis,
                        model(mmodel(atomsis, segments)),
                        cam(DirectX::XMFLOAT4(0.0f, 0.0f, -5.0f, 1.0f)){
     if (!atoms.empty()){
-        DirectX::XMFLOAT3 minimum(
+        DirectX::XMFLOAT4 minimum(
             std::numeric_limits<float>::max(),
             std::numeric_limits<float>::max(),
-            std::numeric_limits<float>::max()
+            std::numeric_limits<float>::max(),
+            1.0f
         );
-        DirectX::XMFLOAT3 maximum(
+        DirectX::XMFLOAT4 maximum(
             std::numeric_limits<float>::lowest(),
             std::numeric_limits<float>::lowest(),
-            std::numeric_limits<float>::lowest()
+            std::numeric_limits<float>::lowest(),
+            1.0f
         );
         for (const auto &a : atoms){
             minimum.x = std::min(minimum.x, a.x);
@@ -45,15 +47,17 @@ atomizerer::atomizerer(QVulkanWindow *window, const std::vector<atom> &atomsis,
             maximum.z = std::max(maximum.z, a.z);
         }
 
-        const DirectX::XMFLOAT3 center(
+        const DirectX::XMFLOAT4 center(
             (minimum.x + maximum.x) * 0.5f,
             (minimum.y + maximum.y) * 0.5f,
-            (minimum.z + maximum.z) * 0.5f
+            (minimum.z + maximum.z) * 0.5f,
+            1.0f
         );
         const float halfx = (maximum.x - minimum.x) * 0.5f + 1.0f;
         const float halfy = (maximum.y - minimum.y) * 0.5f + 1.0f;
         const float halfz = (maximum.z - minimum.z) * 0.5f + 1.0f;
-        const float sceneradius = std::sqrt(halfx * halfx + halfy * halfy + halfz * halfz);
+        const DirectX::XMVECTOR halfsize = DirectX::XMVectorSet(halfx,halfy,halfz,0.0f);
+        const float sceneradius = DirectX::XMVectorGetX(DirectX::XMVector3Length(halfsize));
         const float cameradistance = std::max(sceneradius * 1.6f, 5.0f);
 
         cam.setPosition(DirectX::XMFLOAT4(center.x, center.y, center.z - cameradistance, 1.0f));
@@ -467,8 +471,8 @@ void atomizerer::initResources(){
         };
         VkVertexInputBindingDescription modelbinding{0, sizeof(modelvertex), VK_VERTEX_INPUT_RATE_VERTEX};
         VkVertexInputAttributeDescription modelactoress [] = {
-            {0, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(modelvertex, position)},
-            {1, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(modelvertex, normal)},
+            {0, 0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(modelvertex, position)},
+            {1, 0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(modelvertex, normal)},
             {2, 0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(modelvertex, colour)}
         };
         VkPipelineVertexInputStateCreateInfo modelinput{};
@@ -574,7 +578,7 @@ void atomizerer::startNextFrame(){
     VkDevice device = windows->device();
     VkCommandBuffer piastry = windows->currentCommandBuffer();
     const QSize qsize = windows->swapChainImageSize();
-    VkClearColorValue cc = {{0, 0, 0, 1}};
+    VkClearColorValue cc = {{0.063f, 0.094f, 0.125f, 1.0f}};
     VkClearDepthStencilValue cd = {1, 0};
     VkClearValue c[3];
     memset(&c, 0, sizeof(c));
@@ -700,7 +704,7 @@ void atomizerer::setMode(int value){
 
 void atomizerer::pick(int x, int y, int width, int height){
     if (width <= 0 || height <= 0) return;
-    float origin[3], direction[3];
+    DirectX::XMFLOAT4 origin, direction;
     int cmode;
     {
         QMutexLocker locker(&mutexgui);
@@ -735,8 +739,9 @@ void atomizerer::pick(int x, int y, int width, int height){
             for (const auto &a : atoms){
                 if (std::strcmp(a.chain, piece.chain.c_str()) != 0 ||
                     a.s < first || a.s > last || std::strcmp(a.d, "CA") != 0) continue;
-                const float dx = a.x-hit.position[0], dy = a.y-hit.position[1], dz = a.z-hit.position[2];
-                const float distance = dx*dx+dy*dy+dz*dz;
+                const DirectX::XMVECTOR pos = DirectX::XMVectorSet(a.x,a.y,a.z,1.0f);
+                const DirectX::XMVECTOR delta = pos - DirectX::XMLoadFloat4(&hit.position);
+                const float distance = DirectX::XMVectorGetX(DirectX::XMVector3LengthSq(delta));
                 if (distance < nearest){ nearest = distance; center = a.s; }
             }
             first = std::max(first, center-2);
@@ -788,9 +793,8 @@ void atomizerer::pick(int x, int y, int width, int height){
 
 void atomizerer::move(float famount, float samount, float vamount, float seconds, bool fast){
     const float distance = movspeed * seconds * (fast ? 4.0f : 1.0f);
-    const float dirlength = std::sqrt(
-        famount * famount + samount * samount + vamount * vamount
-    );
+    const DirectX::XMVECTOR direction = DirectX::XMVectorSet(famount,samount,vamount,0.0f);
+    const float dirlength = DirectX::XMVectorGetX(DirectX::XMVector3Length(direction));
     if (dirlength > 0.0f){
         famount /= dirlength;
         samount /= dirlength;

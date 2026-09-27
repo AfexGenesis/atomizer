@@ -11,7 +11,7 @@ struct i{
 };
 
 struct o{
-    [[vk::location(0)]] float3 vposition : TEXCOORD0;
+    [[vk::location(0)]] float4 vposition : TEXCOORD0;
     [[vk::location(1)]] nointerpolation float4 sphere : TEXCOORD1;
     [[vk::location(2)]] nointerpolation float4 colour : COLOR0;
     [[vk::location(3)]] nointerpolation float4 end : TEXCOORD3;
@@ -33,7 +33,7 @@ o main (i input){
     // Cull that very close instance instead of producing a screen-sized quad.
     float front = center.z - radius;
     if (front <= 0.01f){
-        output.vposition = float3(0.0f, 0.0f, 1.0f);
+        output.vposition = float4(0.0f, 0.0f, 1.0f, 1.0f);
         output.position = float4(2.0f, 2.0f, 0.0f, 1.0f);
         return output;
     }
@@ -63,7 +63,7 @@ o main (i input){
     float4 vposition = float4(raySlope * center.z, center.z, 1.0f);
     float4 frontposition = float4(raySlope * front, front, 1.0f);
 
-    output.vposition = vposition.xyz;
+    output.vposition = vposition;
     // Rasterize at the front of the bound. The fragment shader promises that
     // its exact depth is no closer, allowing early depth rejection.
     output.position = mul(projection, frontposition);

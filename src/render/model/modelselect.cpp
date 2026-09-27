@@ -4,22 +4,25 @@
 #include <limits>
 
 namespace {
-struct vec { float x, y, z; };
-vec point(const float p[3]){ return {p[0],p[1],p[2]}; }
-vec operator-(vec a, vec b){ return {a.x-b.x,a.y-b.y,a.z-b.z}; }
-vec cross(vec a, vec b){ return {a.y*b.z-a.z*b.y,a.z*b.x-a.x*b.z,a.x*b.y-a.y*b.x}; }
-float dot(vec a, vec b){ return a.x*b.x+a.y*b.y+a.z*b.z; }
+using vec = DirectX::XMVECTOR;
+vec point(const DirectX::XMFLOAT4 &p){ return DirectX::XMLoadFloat4(&p); }
+vec cross(vec a, vec b){ return DirectX::XMVector3Cross(a,b); }
+float dot(vec a, vec b){ return DirectX::XMVectorGetX(DirectX::XMVector3Dot(a,b)); }
 
-bool hits_box(const modelpiece &piece, const float origin[3], const float direction[3], float best){
+bool hits_box(const modelpiece &piece, const DirectX::XMFLOAT4 &origin, const DirectX::XMFLOAT4 &direction, float best){
     float near = 0.0f;
     float far = best;
+    const float starts[4] = {origin.x,origin.y,origin.z,origin.w};
+    const float rays[4] = {direction.x,direction.y,direction.z,direction.w};
+    const float minimum[4] = {piece.minimum.x,piece.minimum.y,piece.minimum.z,piece.minimum.w};
+    const float maximum[4] = {piece.maximum.x,piece.maximum.y,piece.maximum.z,piece.maximum.w};
     for (int axis = 0; axis < 3; ++axis){
-        if (std::abs(direction[axis]) < 1e-7f){
-            if (origin[axis] < piece.minimum[axis] || origin[axis] > piece.maximum[axis]) return false;
+        if (std::abs(rays[axis]) < 1e-7f){
+            if (starts[axis] < minimum[axis] || starts[axis] > maximum[axis]) return false;
             continue;
         }
-        float a = (piece.minimum[axis]-origin[axis])/direction[axis];
-        float b = (piece.maximum[axis]-origin[axis])/direction[axis];
+        float a = (minimum[axis]-starts[axis])/rays[axis];
+        float b = (maximum[axis]-starts[axis])/rays[axis];
         if (a > b) std::swap(a,b);
         near = std::max(near,a);
         far = std::min(far,b);
@@ -29,11 +32,11 @@ bool hits_box(const modelpiece &piece, const float origin[3], const float direct
 }
 }
 
-modelhit pmodel(const modelmesh &mesh, const float origin[3], const float direction[3]){
+modelhit pmodel(const modelmesh &mesh, const DirectX::XMFLOAT4 &origin, const DirectX::XMFLOAT4 &direction){
     modelhit hit;
     float best = std::numeric_limits<float>::max();
-    const vec start = point(origin);
-    const vec ray = point(direction);
+    const vec start = DirectX::XMLoadFloat4(&origin);
+    const vec ray = DirectX::XMLoadFloat4(&direction);
 
     for (size_t part = 0; part < mesh.pieces.size(); ++part){
         const auto &piece = mesh.pieces[part];
@@ -63,8 +66,7 @@ modelhit pmodel(const modelmesh &mesh, const float origin[3], const float direct
             best = distance;
             hit.piece = static_cast<int>(part);
 
-            for (int axis = 0; axis < 3; ++axis)
-                hit.position[axis] = origin[axis] + direction[axis]*distance;
+            DirectX::XMStoreFloat4(&hit.position,start + ray*distance);
         }
     }
     return hit;

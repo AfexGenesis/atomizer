@@ -8,7 +8,7 @@ class camera {
     void look(float ydelta, float pdelta);
     void move(float famount, float ramount, float uamount);
     DirectX::XMFLOAT4X4 matrix() const;
-    void ray(float x, float y, float aspect, float origin[3], float direction[3]) const;
+    void ray(float x, float y, float aspect, DirectX::XMFLOAT4 &origin, DirectX::XMFLOAT4 &direction) const;
 
     private:
     void updateBasis();

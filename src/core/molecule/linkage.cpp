@@ -3,6 +3,7 @@
 #include <cmath>
 #include <cstring>
 #include <unordered_map>
+#include <DirectXMath.h>
 
 namespace {
 struct cell {
@@ -52,8 +53,9 @@ std::vector<link> find_links(const std::vector<atom> &atoms){
             for (uint32_t j : it->second){
                 const auto &b = atoms[j];
                 if (!related(a, b)) continue;
-                const float dx = a.x - b.x, dy = a.y - b.y, dz = a.z - b.z;
-                const float length2 = dx * dx + dy * dy + dz * dz;
+                const DirectX::XMVECTOR firstpos = DirectX::XMVectorSet(a.x,a.y,a.z,1.0f);
+                const DirectX::XMVECTOR secondpos = DirectX::XMVectorSet(b.x,b.y,b.z,1.0f);
+                const float length2 = DirectX::XMVectorGetX(DirectX::XMVector3LengthSq(firstpos-secondpos));
                 const float limit = std::min(style(a).covalent + style(b).covalent + 0.40f, 2.35f);
                 if (length2 > 0.16f && length2 <= limit * limit) links.push_back({j, i});
             }

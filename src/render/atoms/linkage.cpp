@@ -4,49 +4,39 @@
 #include <cmath>
 
 namespace {
-struct point {
-    float x;
-    float y;
-    float z;
-};
+    DirectX::XMFLOAT4 offset(const atom &first, const atom &second, float amount){
+        DirectX::XMVECTOR axis = DirectX::XMVectorSet(second.x-first.x,second.y-first.y,second.z-first.z,0.0f);
+        const float length = DirectX::XMVectorGetX(DirectX::XMVector3Length(axis));
+        if (length <= 1e-5f) return {0,0,0,0};
+        axis = DirectX::XMVectorScale(axis,1.0f/length);
 
-point offset(const atom &first, const atom &second, float amount){
-    float x = second.x-first.x;
-    float y = second.y-first.y;
-    float z = second.z-first.z;
-    const float length = std::sqrt(x*x+y*y+z*z);
+        const DirectX::XMVECTOR ref = std::abs(DirectX::XMVectorGetZ(axis)) >= 0.8f? DirectX::XMVectorSet(0,1,0,0) : DirectX::XMVectorSet(0,0,1,0);
+        DirectX::XMVECTOR side = DirectX::XMVector3Cross(axis,ref);
+        const float sidelength = DirectX::XMVectorGetX(DirectX::XMVector3Length(side));
+        if (sidelength <= 1e-5f) return {0,0,0,0};
 
-    if (length <= 1e-5f) return {0,0,0};
-    x /= length;
-    y /= length;
-    z /= length;
-    float ry = 0.0f;
-    float rz = 1.0f;
-
-    if (std::abs(z) >= 0.8f){
-        ry = 1.0f;
-        rz = 0.0f;
-    }
-
-    float px = y*rz-z*ry;
-    float py = -x*rz;
-    float pz = x*ry;
-    const float plen = std::sqrt(px*px+py*py+pz*pz);
-
-    if (plen <= 1e-5f) return {0,0,0};
-    return {px*amount/plen, py*amount/plen, pz*amount/plen};
+    DirectX::XMFLOAT4 result;
+    DirectX::XMStoreFloat4(&result,DirectX::XMVectorScale(side,amount/sidelength));
+    return result;
 }
 
-void addhalf(std::vector<insdata> &instances, const atom &a, const point &move,
+void addhalf(std::vector<insdata> &instances, const atom &a, const DirectX::XMFLOAT4 &move,
     const DirectX::XMFLOAT4 &middle, float radius){
-    instances.push_back({{a.x+move.x, a.y+move.y, a.z+move.z, radius}, style(a).colour,
-    { middle.x+move.x, middle.y+move.y, middle.z+move.z, 1}});
+    DirectX::XMFLOAT4 start, end;
+    DirectX::XMStoreFloat4(&start,DirectX::XMVectorSet(a.x,a.y,a.z,1.0f) + DirectX::XMLoadFloat4(&move));
+    DirectX::XMStoreFloat4(&end,DirectX::XMLoadFloat4(&middle) + DirectX::XMLoadFloat4(&move));
+    start.w = radius;
+    end.w = 1.0f;
+    instances.push_back({start,style(a).colour,end});
 }
 
 void addline(std::vector<insdata> &instances, const atom &first, const atom &second, float amount, float radius){
-    const point move = offset(first, second, amount);
-    const DirectX::XMFLOAT4 middle{(first.x+second.x)*0.5f, (first.y+second.y)*0.5f,
-    (first.z+second.z)*0.5f, 1};
+    const DirectX::XMFLOAT4 move = offset(first, second, amount);
+    const DirectX::XMVECTOR start = DirectX::XMVectorSet(first.x,first.y,first.z,1.0f);
+    const DirectX::XMVECTOR end = DirectX::XMVectorSet(second.x,second.y,second.z,1.0f);
+
+    DirectX::XMFLOAT4 middle;
+    DirectX::XMStoreFloat4(&middle,DirectX::XMVectorLerp(start,end,0.5f));
 
     addhalf(instances, first, move, middle, radius);
     addhalf(instances, second, move, middle, radius);
