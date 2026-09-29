@@ -426,6 +426,8 @@ void atomizerer::initResources(){
     memset(&alonso, 0, sizeof(alonso));
     alonso.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
     alonso.rasterizationSamples = windows->sampleCountFlagBits();
+    alonso.alphaToCoverageEnable =
+        windows->sampleCountFlagBits() > VK_SAMPLE_COUNT_1_BIT ? VK_TRUE : VK_FALSE;
     pipelinec.pMultisampleState = &alonso;
 
     VkPipelineDepthStencilStateCreateInfo leclerc;

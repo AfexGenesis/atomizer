@@ -18,6 +18,7 @@ struct o{
 o main(i input){
     float4 ray = normalize(float4(input.vposition.xyz,0.0f));
     float distanceAlongRay = 1e30f;
+    float coverage = 0.0f;
     float4 normal = float4(0, 0, 1, 0);
     float4 start = float4(input.sphere.xyz,1.0f);
     float4 finish = float4(input.end.xyz,1.0f);
@@ -31,12 +32,13 @@ o main(i input){
         float b = len2 * (-dot(start, ray)) - origin * axial;
         float c = len2 * (dot(start.xyz, start.xyz) - radius * radius) - origin * origin;
         float det = b * b - a * c;
-        if (a > 1e-6f && det >= 0.0f){
         float detWidth = max(fwidth(det), 1e-7f);
+        if (a > 1e-6f && det >= 0.0f){
             float t = (-b - sqrt(det)) / a;
             float along = origin + t * axial;
             if (t > 0.0f && along >= 0.0f && along <= len2){
                 distanceAlongRay = t;
+                coverage = max(coverage, smoothstep(-detWidth, detWidth, det));
                 float4 hit = ray * t;
                 normal = normalize(float4(hit.xyz - (start + axis * (along / len2)).xyz,0.0f));
             }
@@ -48,10 +50,12 @@ o main(i input){
         float4 center = cap == 0 ? start : finish;
         float projection = dot(ray, center);
         float det = projection * projection - dot(center.xyz, center.xyz) + radius * radius;
+        float detWidth = max(fwidth(det), 1e-7f);
         if (det < 0.0f) continue;
         float t = projection - sqrt(det);
         if (t > 0.0f && t < distanceAlongRay){
             distanceAlongRay = t;
+            coverage = max(coverage, smoothstep(-detWidth, detWidth, det));
             normal = normalize(float4(ray.xyz * t - center.xyz,0.0f));
         }
     }
@@ -70,7 +74,7 @@ o main(i input){
     float4 psurface = mul(projection, surface);
 
     o output;
-    output.colour = float4(saturate(input.colour.rgb * shade + specular), input.colour.a);
+    output.colour = float4(saturate(input.colour.rgb * shade + specular), input.colour.a * coverage);
     output.depth = psurface.z / psurface.w;
     return output;
 }
