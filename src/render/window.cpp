@@ -18,7 +18,7 @@ atomizer::atomizer(const std::vector<atom> &atomsis, const std::vector<segment> 
 }
 
 QVulkanWindowRenderer* atomizer::createRenderer(){
-    windower = new atomizerer(this, atoms, segments, bonds);
+    windower = new atomizerer(this, atoms, segments, bonds, true);
     return windower;
 };
 

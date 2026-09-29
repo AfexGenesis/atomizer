@@ -32,6 +32,7 @@ o main(i input){
         float c = len2 * (dot(start.xyz, start.xyz) - radius * radius) - origin * origin;
         float det = b * b - a * c;
         if (a > 1e-6f && det >= 0.0f){
+        float detWidth = max(fwidth(det), 1e-7f);
             float t = (-b - sqrt(det)) / a;
             float along = origin + t * axial;
             if (t > 0.0f && along >= 0.0f && along <= len2){
