@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 4.3)
 project(
     atomizer
-    VERSION 0.1
+    VERSION 0.3
     LANGUAGES CXX
 )
 include(GNUInstallDirs)
@@ -14,7 +14,9 @@ set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTORCC ON)
 find_package(Vulkan REQUIRED)
 find_package(Qt6 REQUIRED COMPONENTS Core Widgets Gui)
+find_path(DIRECTXMATH_INCLUDE_DIR DirectXMath.h PATH_SUFFIXES directxmath REQUIRED)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
+include_directories(${DIRECTXMATH_INCLUDE_DIR})
 add_subdirectory(src)
 add_subdirectory(shaders)
 add_dependencies(atomizer atomizer_shaders)

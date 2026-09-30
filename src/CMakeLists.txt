@@ -4,3 +4,7 @@ add_subdirectory(render)
 find_package(Vulkan)
 add_executable(atomizer main.cpp)
 target_link_libraries(atomizer PRIVATE atomizer_gui atomizer_core atomizer_atom atomizer_molecule atomizer_render Vulkan::Vulkan Qt6::Core Qt6::Gui Qt6::Widgets)
+
+if(MINGW AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    target_link_libraries(atomizer PRIVATE stdc++exp)
+endif()
