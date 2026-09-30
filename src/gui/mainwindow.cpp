@@ -13,6 +13,7 @@ mainwindow::mainwindow(const std::vector<atom> &atoms, const std::vector<segment
              const std::vector<bond> &bonds, bool dbg, QWidget *parent) 
     : QMainWindow(parent), gui(new Ui::MainWindow){
     gui->setupUi(this);
+    connect(gui->actionScreenshot, &QAction::triggered, this, &mainwindow::screenshot);
     QFont orbitron("Orbitron", 10, QFont::Normal);
 
     rendervulkan = new atomizer(atoms, segments,bonds, dbg);

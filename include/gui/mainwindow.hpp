@@ -21,6 +21,7 @@ class mainwindow : public QMainWindow{
 
     private slots:
         void rendermode (int index);
+        void screenshot();
 
     protected:
         bool eventFilter(QObject *arena, QEvent *event) override;

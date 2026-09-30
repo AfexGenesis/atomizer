@@ -6,6 +6,7 @@
 #include "render/vulkan.hpp"
 
 atomizer::atomizer(bool dbg): debug(dbg){
+    setPreferredColorFormats({VK_FORMAT_B8G8R8A8_UNORM, VK_FORMAT_R8G8B8A8_UNORM });
     movtimer.setInterval(16);
     connect(&movtimer, &QTimer::timeout, this, &atomizer::updateMovement);
 }
