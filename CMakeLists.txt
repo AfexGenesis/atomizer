@@ -4,6 +4,7 @@ project(
     VERSION 0.1
     LANGUAGES CXX
 )
+include(GNUInstallDirs)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -16,6 +17,8 @@ find_package(Qt6 REQUIRED COMPONENTS Core Widgets Gui)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 add_subdirectory(src)
 add_subdirectory(shaders)
+add_dependencies(atomizer atomizer_shaders)
 qt_add_resources(atomizer "atomizer_resources" PREFIX "/" FILES 
 resources/fonts/orbitron-regular.ttf
-resources/fonts/inter-24pt-regular.ttf)
+resources/fonts/inter-24pt-regular.ttf
+resources/assets/atomizer.svg)

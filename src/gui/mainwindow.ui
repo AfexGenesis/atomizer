@@ -54,8 +54,35 @@
    </widget>
    <widget class="QMenu" name="menuExit">
     <property name="title">
-     <string>Exit</string>
+     <string>Help</string>
     </property>
+    <widget class="QMenu" name="menuIt_s_not_Rendering">
+     <property name="title">
+      <string>It's not Rendering</string>
+     </property>
+     <widget class="QMenu" name="menuYou_need_to_use_the_Terminal">
+      <property name="title">
+       <string>You need to use the Terminal</string>
+      </property>
+      <widget class="QMenu" name="menuso_i_just_wrote_this">
+       <property name="title">
+        <string>so i just wrote this</string>
+       </property>
+       <addaction name="action69420"/>
+       <addaction name="action420"/>
+      </widget>
+      <addaction name="actionatomizer_input_filename_cif"/>
+      <addaction name="actionlike_this"/>
+      <addaction name="actionin_the_same_directory_as"/>
+      <addaction name="actionyour_cif_files"/>
+      <addaction name="separator"/>
+      <addaction name="actioni_dont_wanna_make_a_message_box"/>
+      <addaction name="menuso_i_just_wrote_this"/>
+     </widget>
+     <addaction name="actionThis_is_a_CLI_Program"/>
+     <addaction name="menuYou_need_to_use_the_Terminal"/>
+    </widget>
+    <addaction name="menuIt_s_not_Rendering"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuExit"/>
@@ -97,6 +124,46 @@
   <action name="actionScreenshot">
    <property name="text">
     <string>Screenshot</string>
+   </property>
+  </action>
+  <action name="actionThis_is_a_CLI_Program">
+   <property name="text">
+    <string>This is a CLI Program</string>
+   </property>
+  </action>
+  <action name="actionatomizer_input_filename_cif">
+   <property name="text">
+    <string>atomizer input filename.cif</string>
+   </property>
+  </action>
+  <action name="actionlike_this">
+   <property name="text">
+    <string>makesure your terminal is</string>
+   </property>
+  </action>
+  <action name="actionin_the_same_directory_as">
+   <property name="text">
+    <string>in the same directory as</string>
+   </property>
+  </action>
+  <action name="actionyour_cif_files">
+   <property name="text">
+    <string>your cif files</string>
+   </property>
+  </action>
+  <action name="actioni_dont_wanna_make_a_message_box">
+   <property name="text">
+    <string>i dont wanna make a message box</string>
+   </property>
+  </action>
+  <action name="action69420">
+   <property name="text">
+    <string>69</string>
+   </property>
+  </action>
+  <action name="action420">
+   <property name="text">
+    <string>420</string>
    </property>
   </action>
  </widget>

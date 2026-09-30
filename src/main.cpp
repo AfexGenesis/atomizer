@@ -5,6 +5,7 @@
 #include <QFontDatabase>
 #include <QFont>
 #include <print>
+#include <QIcon>
 #include "render/window.hpp"
 #include "render/vulkan.hpp"
 #include "core/cif.hpp"
@@ -23,10 +24,10 @@ int main(int argc, char *argv[]) {
             cif = argv[++input];
         }else if ((arg == "help")){
             std::println("type ./atomizer input ~protein.cif~");
-            //return 69;
+            return 69;
         }else{
             std::println("type ./atomizer help for listed commands");
-            //return 69;
+            return 69;
             }
     }
 
@@ -34,12 +35,12 @@ int main(int argc, char *argv[]) {
     if (!cif.empty()){
         active = molecarser(cif);
     }else{
-        std::println("no cif");
-        // return 69;
+        std::println("no cif, type atomizer help for help");
+        return 69;
     }
 
     QApplication app(argc, argv);
-
+    app.setWindowIcon(QIcon(QStringLiteral(":/resources/assets/atomizer.svg")));
     QFontDatabase::addApplicationFont(":/resources/fonts/orbitron-regular.ttf");
 
     const bool dbg = qEnvironmentVariableIntValue("QT_VK_DEBUG");

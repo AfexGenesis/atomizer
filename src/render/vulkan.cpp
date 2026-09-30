@@ -8,6 +8,11 @@
 #include <limits>
 #include <print>
 #include <DirectXMath.h>
+#include <QCoreApplication>
+#include <QDir>
+#include <QFileInfo>
+#include <QStandardPaths>
+#include <QStringList>
 #include "render/vulkan.hpp"
 #include "core/atom/atominfo.hpp"
 #include "render/atoms/atomselect.hpp"
@@ -18,6 +23,35 @@ static const int size = 2 * sizeof(DirectX::XMFLOAT4X4);
 
 static inline VkDeviceSize aligned(VkDeviceSize v, VkDeviceSize alignByte){
     return (v + alignByte - 1) & ~(alignByte - 1);
+}
+
+static QString shaderlocation(const QString &filename)
+{
+    QStringList lists;
+    const QString overrideDirectory = qEnvironmentVariable("ATOMIZER_SHADER_DIR");
+    if (!overrideDirectory.isEmpty()) {
+        lists.append(QDir(overrideDirectory).filePath(filename));
+    }
+
+    const QDir exe(QCoreApplication::applicationDirPath());
+    lists.append(QDir::cleanPath(exe.filePath(QStringLiteral("../shaders/") + filename)));
+    lists.append(exe.filePath(QStringLiteral("shaders/") + filename));
+
+    const QString relativedata = QStringLiteral("atomizer/shaders/") + filename;
+    for (const QString &datadir : QStandardPaths::standardLocations(QStandardPaths::GenericDataLocation)) {
+        lists.append(QDir(datadir).filePath(relativedata));
+    }
+
+    for (const QString &candidate : lists) {
+        const QFileInfo shader(candidate);
+        if (shader.isFile()) {
+            return shader.absoluteFilePath();
+        }
+    }
+
+    qWarning("shader %s not found; searched: %s", qPrintable(filename),
+    qPrintable(lists.join(QStringLiteral(", "))));
+    return {};
 }
 
 atomizerer::atomizerer(QVulkanWindow *window, const std::vector<atom> &atomsis,
@@ -378,8 +412,8 @@ void atomizerer::initResources(){
         qFatal("couldn't create the pipeline %d", result);
     }
     
-    VkShaderModule fortnite = createShader(QStringLiteral("../shaders/fragment.spv"));
-    VkShaderModule minecraft = createShader(QStringLiteral("../shaders/vertex.spv"));
+    VkShaderModule fortnite = createShader(shaderlocation(QStringLiteral("fragment.spv")));
+    VkShaderModule minecraft = createShader(shaderlocation(QStringLiteral("vertex.spv")));
 
     VkGraphicsPipelineCreateInfo pipelinec;
     memset(&pipelinec, 0, sizeof(pipelinec));
@@ -463,8 +497,8 @@ void atomizerer::initResources(){
         qFatal("no graphic pipeline for u %d", result);
     }
     if (modelcount > 0){
-        VkShaderModule modelvert = createShader(QStringLiteral("../shaders/modelvertex.spv"));
-        VkShaderModule modelfrag = createShader(QStringLiteral("../shaders/modelfragment.spv"));
+        VkShaderModule modelvert = createShader(shaderlocation(QStringLiteral("modelvertex.spv")));
+        VkShaderModule modelfrag = createShader(shaderlocation(QStringLiteral("modelfragment.spv")));
         VkPipelineShaderStageCreateInfo modelshaders[2] = {
             {VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0,
              VK_SHADER_STAGE_VERTEX_BIT, modelvert, "main", nullptr},

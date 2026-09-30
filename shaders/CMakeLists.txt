@@ -30,15 +30,18 @@ add_custom_command(
     COMMAND ${DXC_EXECUTABLE} -spirv -T ps_6_0 -E main ${MODEL_FRAG_SRC} -Fo ${MODEL_FRAG_SPV}
     DEPENDS ${MODEL_FRAG_SRC}
 )
-add_library(atomizer_shaders STATIC)
-qt_add_resources(atomizer_shaders "shader_resources"
-    PREFIX "/shaders"
-    BASE ${CMAKE_CURRENT_BINARY_DIR}
-    FILES
+add_custom_target(atomizer_shaders
+    DEPENDS
         ${VERT_SPV}
         ${FRAG_SPV}
         ${MODEL_VERT_SPV}
         ${MODEL_FRAG_SPV}
 )
 
-target_link_libraries(atomizer_shaders PUBLIC Qt6::Core)
+install(FILES
+    ${VERT_SPV}
+    ${FRAG_SPV}
+    ${MODEL_VERT_SPV}
+    ${MODEL_FRAG_SPV}
+    DESTINATION ${CMAKE_INSTALL_DATADIR}/atomizer/shaders
+)
