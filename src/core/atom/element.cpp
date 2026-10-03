@@ -7,7 +7,7 @@ elementstylied style(const atom &a){
     std::string symbol(a.element);
     std::transform(symbol.begin(), symbol.end(), symbol.begin(), [](unsigned char c){ return std::toupper(c); });
     if (symbol == "H" || symbol == "D") return {0.31f, 1.20f, {0.95f, 0.95f, 0.95f, 1}};
-    if (symbol == "C") return {0.76f, 1.70f, {0.48f, 0.52f, 0.56f, 1}};
+    if (symbol == "C") return {0.76f, 1.70f, {0.62f, 0.66f, 0.70f, 1}};
     if (symbol == "N") return {0.71f, 1.55f, {0.20f, 0.36f, 0.90f, 1}};
     if (symbol == "O") return {0.66f, 1.52f, {0.90f, 0.20f, 0.22f, 1}};
     if (symbol == "S") return {1.05f, 1.80f, {0.96f, 0.82f, 0.18f, 1}};
