@@ -8,201 +8,354 @@
 
 namespace {
     using vec = DirectX::XMVECTOR;
-    float dot(vec a, vec b){ return DirectX::XMVectorGetX(DirectX::XMVector3Dot(a,b)); }
-    vec cross(vec a, vec b){ return DirectX::XMVector3Cross(a,b); }
-    vec unit(vec a){ return dot(a,a) > 1e-10f ? DirectX::XMVector3Normalize(a) : DirectX::XMVectorSet(0,1,0,0); }
-    vec point(const atom &a){ return DirectX::XMVectorSet(a.x,a.y,a.z,1.0f); }
-    struct residue { std::string chain; int seq = 0; vec ca, c, n; bool has_ca = false, has_c = false, has_n = false; shape type = shape::coil; };
-    float width(shape type){ return type == shape::sheet ? 0.68f : type == shape::helix ? 0.55f : 0.20f; }
-    float thick(shape type){ return type == shape::sheet ? 0.10f : type == shape::helix ? 0.22f : 0.20f; }
-    vec colour(shape type){ return type == shape::sheet ? DirectX::XMVectorSet(0.95f,0.78f,0.22f,1.0f) : type == shape::helix ? DirectX::XMVectorSet(0.87f,0.29f,0.32f,1.0f) : DirectX::XMVectorSet(0.63f,0.70f,0.78f,1.0f); }
 
-    vec spline(vec a, vec b, vec c, vec d, float t){
-        const float t2 = t*t, t3 = t2*t;
-        return (b*2.0f + (c-a)*t + (a*2.0f-b*5.0f+c*4.0f-d)*t2 + (b*3.0f-a-c*3.0f+d)*t3)*0.5f;
+    constexpr int msample = 10;
+    constexpr int mquality = 16;
+    constexpr float decival = 1e-6f;
+
+    struct residue {
+        std::string chain;
+        int seq = 0;
+        vec ca = {};
+        vec c = {};
+        vec n = {};
+        vec o = {};
+        bool hasca = false;
+        bool hasc = false;
+        bool hasn = false;
+        bool haso = false;
+        shape type = shape::coil;
+    };
+
+    struct ribbonsample {
+        vec center = {};
+        vec tangent = {};
+        vec horizontal = {};
+        vec vertical = {};
+        vec colour = {};
+        float width = 0.0f;
+        float height = 0.0f;
+        float power = 2.0f;
+        size_t interval = 0;
+        float amount = 0.0f;
+    };
+
+    struct profile {
+        float width;
+        float height;
+        float power;
+    };
+
+    float dot(vec first, vec second){
+        return DirectX::XMVectorGetX(DirectX::XMVector3Dot(first, second));
     }
 
-    void addrun(modelmesh &mesh, const std::vector<residue> &run, size_t first, size_t last, shape type, bool compact){
-        if (last <= first) return;
-        const size_t first_vertex = mesh.vertices.size();
-        const size_t firstindex = mesh.indices.size();
-        const int sides = type == shape::sheet ? 8 : (compact ? 6 : 12);
-        const int steps = compact ? 4 : 8;
-        constexpr float pi = DirectX::XM_PI;
-        bool lastprevious = false;
+    float length(vec value){
+        return DirectX::XMVectorGetX(DirectX::XMVector3Length(value));
+    }
 
-        uint32_t previous = 0;
-        vec lastside{};
-        vec sheetside{};
+    vec cross(vec first, vec second){
+        return DirectX::XMVector3Cross(first, second);
+    }
 
-        if (type == shape::sheet){
+    vec unit(vec value){
+        return dot(value, value) > decival ? DirectX::XMVector3Normalize(value) : DirectX::XMVectorZero();
+    }
 
-            for (size_t i = first+1; i < last; ++i){
-                vec zig = run[i].ca - (run[i-1].ca + run[i+1].ca)*0.5f;
-                if (dot(zig,zig) < 1e-4f) continue;
-                zig = unit(zig);
-                if (dot(zig,sheetside) < 0.0f) zig = zig * -1.0f;
-                sheetside = sheetside + zig;
-            }
-            if (dot(sheetside,sheetside) < 1e-4f && run[first].has_c)
-                sheetside = run[first].c - run[first].ca;
-            sheetside = unit(sheetside);
-        }
-        for (size_t i = first; i < last; ++i){
-            const vec a = run[i > first ? i-1 : i].ca;
-            const vec b = run[i].ca;
-            const vec c = run[i+1].ca;
-            const vec d = run[i+2 <= last ? i+2 : i+1].ca;
-            for (int step = 0; step <= steps; ++step){
-                if (i > first && step == 0) continue;
-                const float t = static_cast<float>(step) / steps;
-                const vec center = spline(a,b,c,d,t);
-                const vec before = spline(a,b,c,d,std::max(0.0f,t-0.01f));
-                const vec after = spline(a,b,c,d,std::min(1.0f,t+0.01f));
-                const vec tangent = unit(after-before);
-                vec side;
+    vec point(const atom &value){
+        return DirectX::XMVectorSet(value.x, value.y, value.z, 1.0f);
+    }
 
-                if (type == shape::sheet){
-                    side = sheetside - tangent*dot(sheetside,tangent);
-                    if (dot(side,side) < 1e-4f && lastprevious)
-                        side = lastside - tangent*dot(lastside,tangent);
-                    if (dot(side,side) < 1e-4f)
-                        side = cross(tangent, DirectX::XMVectorSet(0,1,0,0));
-                    if (dot(side,side) < 1e-4f)
-                        side = cross(tangent, DirectX::XMVectorSet(1,0,0,0));
-                    side = unit(side);
-                    if (lastprevious && dot(side,lastside) < 0.0f) side = side * -1.0f;
-                }else if (!lastprevious){
-                    vec ref = run[i].has_c ? run[i].c-run[i].ca : DirectX::XMVectorSet(0,1,0,0);
-                    side = unit(cross(tangent,ref));
-                    if (dot(side,side) < 0.5f || dot(cross(tangent,ref),cross(tangent,ref)) < 1e-4f)
-                        side = unit(cross(tangent, DirectX::XMVectorSet(0,1,0,0)));
-                }else{
-                    side = unit(lastside - tangent*dot(lastside,tangent));
-                }
+    float smooth(float value){
+        value = std::clamp(value, 0.0f, 1.0f);
+        return value * value * (3.0f - 2.0f * value);
+    }
 
-                if (dot(side,side) < 0.5f) side = unit(cross(tangent, DirectX::XMVectorSet(1,0,0,0)));
-                lastside = side;
+    profile properties(shape type){
+        if (type == shape::sheet) return {0.72f, 0.105f, 5.0f};
+        if (type == shape::helix) return {0.56f, 0.18f, 3.6f};
+        return {0.19f, 0.19f, 2.0f};
+    }
 
-                const vec up = unit(cross(tangent,side));
-                float w = width(type);
-                float h = thick(type);
-                const vec col = colour(type);
-                DirectX::XMFLOAT4 coldata;
-                DirectX::XMStoreFloat4(&coldata, col);
-
-                if (type == shape::sheet && i+1 == last){
-                   w *= t < 0.25f ? 1.0f + 0.5f*t/0.25f : std::max(0.02f,1.5f*(1.0f-t)/0.75f);
-                    if (t > 0.85f) h *= std::max(0.10f,(1.0f-t)/0.15f);
-                }
-                
-                const uint32_t ring = static_cast<uint32_t>(mesh.vertices.size());
-                for (int j = 0; j < sides; ++j){
-                    vec pos, normal;
-                    if (type == shape::sheet){
-                        const float across[] = {1,-1,-1,-1,-1,1,1,1};
-                        const float height[] = {1,1,1,-1,-1,-1,-1,1};
-                        pos = center + side*(w*across[j]) + up*(h*height[j]);
-                        normal = j < 2 ? up : j < 4 ? side*-1.0f : j < 6 ? up*-1.0f : side;
-                    }else{
-                        const float angle = 2*pi*j/sides;
-                        float sn, cs;
-                        DirectX::XMScalarSinCos(&sn, &cs, angle);
-                        pos = center + side* (w * cs) + up * (h * sn);
-                        normal = unit(side* (cs / w) + up * (sn / h));
-                    }
-                    modelvertex vertex;
-                    DirectX::XMStoreFloat4(&vertex.position, pos);
-                    DirectX::XMStoreFloat4(&vertex.normal, normal);
-                    vertex.colour = coldata;
-                    mesh.vertices.push_back(vertex);
-                }
-
-            if (lastprevious){
-                for (int j = 0; j < sides; ++j){
-                    const uint32_t next = (j+1)%sides;
-                    mesh.indices.insert(mesh.indices.end(), {previous+static_cast<uint32_t>(j), ring+static_cast<uint32_t>(j), ring+next,
-                    previous+static_cast<uint32_t>(j), ring+next, previous+next});
-                }
-            }
-            previous = ring;
-            lastprevious = true;
+    vec hsv(float hue, float saturation, float value){
+        hue = hue - std::floor(hue);
+        const float scaled = hue * 6.0f;
+        const int section = static_cast<int>(scaled);
+        const float part = scaled - section;
+        const float low = value * (1.0f - saturation);
+        const float fall = value * (1.0f - saturation * part);
+        const float rise = value * (1.0f - saturation * (1.0f - part));
+        switch (section % 6){
+            case 0: return DirectX::XMVectorSet(value, rise, low, 1.0f);
+            case 1: return DirectX::XMVectorSet(fall, value, low, 1.0f);
+            case 2: return DirectX::XMVectorSet(low, value, rise, 1.0f);
+            case 3: return DirectX::XMVectorSet(low, fall, value, 1.0f);
+            case 4: return DirectX::XMVectorSet(rise, low, value, 1.0f);
+            default: return DirectX::XMVectorSet(value, low, fall, 1.0f);
         }
     }
-        modelpiece piece;
-        piece.firstindex = static_cast<uint32_t>(firstindex);
-        piece.countindex = static_cast<uint32_t>(mesh.indices.size() - firstindex);
-        piece.chain = run[first].chain;
-        piece.firstresidue = run[first].seq;
-        piece.lastresidue = run[last].seq;
-        piece.type = type;
 
-        const auto &start = mesh.vertices[first_vertex].position;
+    vec blend(vec first, vec second, float amount){
+        return DirectX::XMVectorLerp(first, second, amount);
+    }
+
+    vec safeblend(vec first, vec second, float amount){
+        const vec result = blend(first, second, amount);
+        return dot(result, result) > decival ? unit(result) : unit(first);
+    }
+
+    float knot(vec first, vec second){
+        return std::sqrt(std::max(length(second - first), 0.0001f));
+    }
+
+    vec knotblend(vec first, vec second, float firsttime, float secondtime, float time){
+        const float span = std::max(secondtime - firsttime, 0.0001f);
+        return blend(first, second, (time - firsttime) / span);
+    }
+
+    vec spline(vec first, vec second, vec third, vec fourth, float amount){
+        const float timezero = 0.0f;
+        const float timeone = timezero + knot(first, second);
+        const float timetwo = timeone + knot(second, third);
+        const float timethree = timetwo + knot(third, fourth);
+        const float time = timeone + (timetwo - timeone) * amount;
+
+        const vec levelonea = knotblend(first, second, timezero, timeone, time);
+        const vec leveloneb = knotblend(second, third, timeone, timetwo, time);
+        const vec levelonec = knotblend(third, fourth, timetwo, timethree, time);
+        const vec leveltwoa = knotblend(levelonea, leveloneb, timezero, timetwo, time);
+        const vec leveltwob = knotblend(leveloneb, levelonec, timeone, timethree, time);
+    return knotblend(leveltwoa, leveltwob, timeone, timetwo, time);
+    }
+
+    vec guide(const residue &value){
+        if (value.haso && value.hasc) return value.o - value.c;
+        if (value.hasc) return value.c - value.ca;
+        if (value.hasn) return value.n - value.ca;
+        return DirectX::XMVectorZero();
+    }
+
+    vec perpendicular(vec tangent){
+        vec result = cross(tangent, DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f));
+        if (dot(result, result) < decival)
+            result = cross(tangent, DirectX::XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f));
+        return unit(result);
+    }
+
+    shape edgetype(const std::vector<residue> &run, const ribbonsample &sample){
+        const size_t next = std::min(sample.interval + 1, run.size() - 1);
+        return run[sample.interval].type == run[next].type ? run[sample.interval].type : shape::coil;
+    }
+
+    void appendvertex(modelmesh &mesh, vec position, vec normal, vec colour){
+        modelvertex vertex;
+        DirectX::XMStoreFloat4(&vertex.position, position);
+        DirectX::XMStoreFloat4(&vertex.normal, normal);
+        DirectX::XMStoreFloat4(&vertex.colour, colour);
+        mesh.vertices.push_back(vertex);
+    }
+
+    void appendcap(modelmesh &mesh, const ribbonsample &sample, uint32_t ring, bool start){
+        const uint32_t center = static_cast<uint32_t>(mesh.vertices.size());
+        const vec normal = sample.tangent * (start ? -1.0f : 1.0f);
+        appendvertex(mesh, sample.center, normal, sample.colour);
+        for (int horizontal = 0; horizontal < mquality; ++horizontal){
+            const uint32_t next = static_cast<uint32_t>((horizontal + 1) % mquality);
+            if (start) mesh.indices.insert(mesh.indices.end(), {center, ring + next, ring + static_cast<uint32_t>(horizontal)});
+            else mesh.indices.insert(mesh.indices.end(), {center, ring + static_cast<uint32_t>(horizontal), ring + next});
+        }
+    }
+
+    void finishpiece(modelmesh &mesh, modelpiece &piece){
+        piece.countindex = static_cast<uint32_t>(mesh.indices.size()) - piece.firstindex;
+        if (piece.countindex == 0) return;
+        const auto &start = mesh.vertices[mesh.indices[piece.firstindex]].position;
         piece.minimum = start;
         piece.maximum = start;
-        for (size_t i = first_vertex+1; i < mesh.vertices.size(); ++i){
-            const auto &pos = mesh.vertices[i].position;
-            piece.minimum.x = std::min(piece.minimum.x, pos.x);
-            piece.minimum.y = std::min(piece.minimum.y, pos.y);
-            piece.minimum.z = std::min(piece.minimum.z, pos.z);
-            piece.maximum.x = std::max(piece.maximum.x, pos.x);
-            piece.maximum.y = std::max(piece.maximum.y, pos.y);
-            piece.maximum.z = std::max(piece.maximum.z, pos.z);
+        const size_t end = static_cast<size_t>(piece.firstindex) + piece.countindex;
+        for (size_t index = piece.firstindex + 1; index < end; ++index){
+            const auto &position = mesh.vertices[mesh.indices[index]].position;
+            piece.minimum.x = std::min(piece.minimum.x, position.x);
+            piece.minimum.y = std::min(piece.minimum.y, position.y);
+            piece.minimum.z = std::min(piece.minimum.z, position.z);
+            piece.maximum.x = std::max(piece.maximum.x, position.x);
+            piece.maximum.y = std::max(piece.maximum.y, position.y);
+            piece.maximum.z = std::max(piece.maximum.z, position.z);
         }
-        mesh.pieces.push_back(std::move(piece));
+    mesh.pieces.push_back(piece);
     }
 
-    void addchain(modelmesh &mesh, const std::vector<residue> &run, bool compact){
-        if (run.size() < 2) return;
-        auto interval = [&](size_t i){ return run[i].type == run[i+1].type ? run[i].type : shape::coil; };
-        size_t first = 0;
-        shape type = interval(0);
+    std::vector<ribbonsample> makesamples(const std::vector<residue> &run){
+        std::vector<ribbonsample> samples;
+        samples.reserve((run.size() - 1) * msample + 1);
 
-        for (size_t i = 1; i+1 < run.size(); ++i){
-            const shape next = interval(i);
-            if (next == type) continue;
-            addrun(mesh, run, first, i, type, compact);
-            first = i;
-            type = next;
+        for (size_t index = 0; index + 1 < run.size(); ++index){
+            const vec second = run[index].ca;
+            const vec third = run[index + 1].ca;
+            const vec first = index > 0 ? run[index - 1].ca : second - (third - second);
+            const vec fourth = index + 2 < run.size() ? run[index + 2].ca : third + (third - second);
+            for (int step = 0; step < msample; ++step){
+                ribbonsample sample;
+                sample.amount = static_cast<float>(step) / msample;
+                sample.interval = index;
+                sample.center = spline(first, second, third, fourth, sample.amount);
+                samples.push_back(sample);
+            }
         }
-        addrun(mesh, run, first, run.size()-1, type, compact);
+
+        ribbonsample finalsample;
+        finalsample.amount = 1.0f;
+        finalsample.interval = run.size() - 2;
+        finalsample.center = run.back().ca;
+        samples.push_back(finalsample);
+
+        for (size_t index = 0; index < samples.size(); ++index){
+            const vec before = samples[index > 0 ? index - 1 : index].center;
+            const vec after = samples[index + 1 < samples.size() ? index + 1 : index].center;
+            samples[index].tangent = unit(after - before);
+        }
+
+        vec previoushorizontal = DirectX::XMVectorZero();
+        for (size_t index = 0; index < samples.size(); ++index){
+            ribbonsample &sample = samples[index];
+            const size_t nextindex = std::min(sample.interval + 1, run.size() - 1);
+            const float amount = smooth(sample.amount);
+            const profile firstprofile = properties(run[sample.interval].type);
+            const profile secondprofile = properties(run[nextindex].type);
+            sample.width = firstprofile.width + (secondprofile.width - firstprofile.width) * amount;
+            sample.height = firstprofile.height + (secondprofile.height - firstprofile.height) * amount;
+            sample.power = firstprofile.power + (secondprofile.power - firstprofile.power) * amount;
+
+            const bool sheetend = run[sample.interval].type == shape::sheet && (run[nextindex].type != shape::sheet || nextindex + 1 == run.size());
+            if (sheetend){
+                const float arrow = sample.amount < 0.38f ? 1.0f + 0.55f * smooth(sample.amount / 0.38f)
+                : 1.55f + (0.18f / properties(shape::sheet).width - 1.55f) * smooth((sample.amount - 0.38f) / 0.62f);
+                sample.width = properties(shape::sheet).width * arrow;
+                sample.height = properties(shape::sheet).height;
+                sample.power = properties(shape::sheet).power;
+            }
+
+            const float sequenceamount = (static_cast<float>(sample.interval) + sample.amount) / std::max(1.0f, static_cast<float>(run.size() - 1));
+            sample.colour = hsv(sequenceamount * 0.68f, 0.78f, 0.96f);
+
+            vec desired = blend(guide(run[sample.interval]), guide(run[nextindex]), amount);
+            desired = desired - sample.tangent * dot(desired, sample.tangent);
+            if (dot(desired, desired) > decival) desired = unit(desired);
+
+            if (index == 0){
+                previoushorizontal = dot(desired, desired) > decival ? desired : perpendicular(sample.tangent);
+            }else {
+                vec transported = previoushorizontal - sample.tangent * dot(previoushorizontal, sample.tangent);
+                transported = dot(transported, transported) > decival ? unit(transported) : perpendicular(sample.tangent);
+                if (dot(desired, desired) > decival){
+                    if (dot(desired, transported) < 0.0f) desired = desired * -1.0f;
+                    const float guideweight = run[sample.interval].type == shape::sheet ? 0.16f : 0.07f;
+                    transported = safeblend(transported, desired, guideweight);
+                }
+            previoushorizontal = transported;
+            }
+            sample.horizontal = previoushorizontal;
+            sample.vertical = unit(cross(sample.tangent, sample.horizontal));
+            sample.horizontal = unit(cross(sample.vertical, sample.tangent));
+        }
+    return samples;
+    }
+
+    void addchain(modelmesh &mesh, const std::vector<residue> &run){
+        if (run.size() < 2) return;
+        const std::vector<ribbonsample> samples = makesamples(run);
+        const uint32_t firstvertex = static_cast<uint32_t>(mesh.vertices.size());
+
+        for (const ribbonsample &sample : samples){
+            for (int horizontal = 0; horizontal < mquality; ++horizontal){
+                const float angle = DirectX::XM_2PI * static_cast<float>(horizontal) / mquality;
+                float sine = 0.0f;
+                float cosine = 0.0f;
+                DirectX::XMScalarSinCos(&sine, &cosine, angle);
+
+                const float exponent = 2.0f / sample.power;
+                const float xunit = std::copysign(std::pow(std::abs(cosine), exponent), cosine);
+                const float yunit = std::copysign(std::pow(std::abs(sine), exponent), sine);
+                const float x = sample.width * xunit;
+                const float y = sample.height * yunit;
+
+                const vec position = sample.center + sample.horizontal * x + sample.vertical * y;
+                const float normalx = std::copysign(std::pow(std::abs(xunit), sample.power - 1.0f), xunit) / std::max(sample.width, 0.001f);
+                const float normaly = std::copysign(std::pow(std::abs(yunit), sample.power - 1.0f), yunit) / std::max(sample.height, 0.001f);
+                const vec normal = unit(sample.horizontal * normalx + sample.vertical * normaly);
+                appendvertex(mesh, position, normal, sample.colour);
+            }
+        }
+
+        size_t firstedge = 1;
+        while (firstedge < samples.size()){
+            const shape type = edgetype(run, samples[firstedge]);
+            size_t lastedge = firstedge;
+            while (lastedge + 1 < samples.size() && edgetype(run, samples[lastedge + 1])== type) ++lastedge;
+
+            modelpiece piece;
+            piece.firstindex = static_cast<uint32_t>(mesh.indices.size());
+            piece.chain = run.front().chain;
+            piece.type = type;
+            piece.firstresidue = run[samples[firstedge - 1].interval].seq;
+            piece.lastresidue = run[std::min(samples[lastedge].interval + 1, run.size() - 1)].seq;
+
+            if (firstedge == 1) appendcap(mesh, samples.front(), firstvertex, true);
+            for (size_t edge = firstedge; edge <= lastedge; ++edge){
+                const uint32_t previous = firstvertex + static_cast<uint32_t>((edge - 1) * mquality);
+                const uint32_t current = firstvertex + static_cast<uint32_t>(edge * mquality);
+                for (int horizontal = 0; horizontal < mquality; ++horizontal){
+                    const uint32_t next = static_cast<uint32_t>((horizontal + 1) % mquality);
+                    mesh.indices.insert(mesh.indices.end(), {
+                        previous + static_cast<uint32_t>(horizontal), current + static_cast<uint32_t>(horizontal), current + next,
+                        previous + static_cast<uint32_t>(horizontal), current + next, previous + next
+                    });
+                }
+            }
+            if (lastedge + 1 == samples.size()){
+                const uint32_t lastring = firstvertex + static_cast<uint32_t>((samples.size() - 1) * mquality);
+                appendcap(mesh, samples.back(), lastring, false);
+            }
+        finishpiece(mesh, piece);
+        firstedge = lastedge + 1;
+        }
     }
 }
 
 modelmesh mmodel(const std::vector<atom> &atoms, const std::vector<segment> &segments){
-    std::map<std::pair<std::string,int>,residue> residues;
-    for (const auto &a : atoms){
-        if (std::strcmp(a.t,"ATOM") != 0 || a.s <= 0) continue;
-        auto &r = residues[{a.chain,a.s}];
-        r.chain = a.chain;
-        r.seq = a.s;
-        if (std::strcmp(a.d,"CA") == 0){ r.ca = point(a); r.has_ca = true; }
-        if (std::strcmp(a.d,"C") == 0){ r.c = point(a); r.has_c = true; }
-        if (std::strcmp(a.d,"N") == 0){ r.n = point(a); r.has_n = true; }
+    std::map<std::pair<std::string, int>, residue> residues;
+    for (const atom &value : atoms){
+        if (std::strcmp(value.t, "ATOM") != 0 || value.s <= 0) continue;
+        residue &current = residues[{value.chain, value.s}];
+        current.chain = value.chain;
+        current.seq = value.s;
+        if (std::strcmp(value.d, "CA") == 0){ current.ca = point(value); current.hasca = true; }
+        if (std::strcmp(value.d, "C") == 0){ current.c = point(value); current.hasc = true; }
+        if (std::strcmp(value.d, "N") == 0){ current.n = point(value); current.hasn = true; }
+        if (std::strcmp(value.d, "O") == 0){ current.o = point(value); current.haso = true; }
     }
 
-    for (const auto &s : segments){
-        for (int seq = s.first; seq <= s.last; ++seq){
-            auto it = residues.find({s.chain,seq});
-            if (it != residues.end()) it->second.type = s.type;
+    for (const segment &current : segments){
+        for (int seq = current.first; seq <= current.last; ++seq){
+            const auto found = residues.find({current.chain, seq});
+            if (found != residues.end()) found->second.type = current.type;
         }
     }
 
-    const bool compact = std::count_if(residues.begin(), residues.end(), [](const auto &item){ return item.second.has_ca; }) >= 20000;
     modelmesh mesh;
     std::vector<residue> run;
-    for (const auto &[key,r] : residues){
-        if (!r.has_ca) continue;
+    for (const auto &[key, current] : residues){
+        if (!current.hasca) continue;
         if (!run.empty()){
-            const auto &last = run.back();
-            const vec delta = r.ca-last.ca;
-            if (r.chain != last.chain || r.seq != last.seq+1 || dot(delta,delta) > 25.0f){
-                addchain(mesh, run, compact);
+            const residue &previous = run.back();
+            const vec difference = current.ca - previous.ca;
+            if (current.chain != previous.chain || current.seq != previous.seq + 1 || dot(difference, difference) > 25.0f){
+                addchain(mesh, run);
                 run.clear();
             }
         }
-        run.push_back(r);
+        run.push_back(current);
     }
-    addchain(mesh,run,compact);
+    addchain(mesh,run);
     return mesh;
 }

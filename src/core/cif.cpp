@@ -53,8 +53,8 @@ std::vector<atom> ciff::parse(const std::string &cif){
     if (!file.is_open()) return a;
 
     std::string line;
-    int d = -1, s = -1, as = -1, x = -1, y = -1, z = -1;
-    int m = -1, t = -1, i = -1, o = -1, e = -1, c = -1, l = -1;
+    int d = -1, ad = -1, s = -1, as = -1, x = -1, y = -1, z = -1;
+    int m = -1, t = -1, i = -1, o = -1, ao = -1, e = -1, c = -1, ac = -1, l = -1;
     int column = 0;
     int first_model = -1;
     bool in_loop = false;
@@ -63,7 +63,7 @@ std::vector<atom> ciff::parse(const std::string &cif){
 
     while (std::getline(file, line)){
         if (line == "loop_"){
-            d = s = as = x = y = z = m = t = i = o = e = c = l = -1;
+            d = ad = s = as = x = y = z = m = t = i = o = ao = e = c = ac = l = -1;
             column = 0;
             in_loop = true;
             atom_loop = false;
@@ -81,9 +81,12 @@ std::vector<atom> ciff::parse(const std::string &cif){
             if (name == "_atom_site.id") i = column;
             if (name == "_atom_site.type_symbol") e = column;
             if (name == "_atom_site.label_atom_id") d = column;
+            if (name == "_atom_site.auth_atom_id") ad = column;
             if (name == "_atom_site.label_alt_id") l = column;
             if (name == "_atom_site.label_comp_id") o = column;
+            if (name == "_atom_site.auth_comp_id") ao = column;
             if (name == "_atom_site.label_asym_id") c = column;
+            if (name == "_atom_site.auth_asym_id") ac = column;
             if (name == "_atom_site.label_seq_id") s = column;
             if (name == "_atom_site.auth_seq_id") as = column;
             if (name == "_atom_site.Cartn_x") x = column;
@@ -122,10 +125,15 @@ std::vector<atom> ciff::parse(const std::string &cif){
         ca.i = number(r, i, static_cast<int>(a.size()) + 1);
         ca.s = number(r, s, number(r, as, 0));
         copy(ca.t, sizeof(ca.t), value(r, t));
-        copy(ca.o, sizeof(ca.o), value(r, o));
-        copy(ca.d, sizeof(ca.d), value(r, d));
+        auto preferred = [&](int label, int author) {
+            std::string result = value(r, label);
+            if (result.empty() || result == "." || result == "?") result = value(r, author);
+            return result;
+        };
+        copy(ca.o, sizeof(ca.o), preferred(o, ao));
+        copy(ca.d, sizeof(ca.d), preferred(d, ad));
         copy(ca.element, sizeof(ca.element), value(r, e));
-        copy(ca.chain, sizeof(ca.chain), value(r, c));
+        copy(ca.chain, sizeof(ca.chain), preferred(c, ac));
         copy(ca.alt, sizeof(ca.alt), value(r, l));
 
         const std::string site = std::string(ca.chain) + "|" + std::to_string(ca.s) + "|" + ca.o + "|" + ca.d;

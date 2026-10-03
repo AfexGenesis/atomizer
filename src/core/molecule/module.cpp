@@ -59,6 +59,11 @@ std::vector<segment> readmodule(const std::string &path){
             const auto it = columns.find(category + name);
             return it != columns.end() && it->second < row.size() ? row[it->second] : "";
         };
+        auto preferred = [&](const char *label, const char *author) -> std::string {
+            std::string result = field(label);
+            if (result.empty() || result == "." || result == "?") result = field(author);
+            return result;
+        };
 
         shape type = shape::sheet;
         if (category == "_struct_conf."){
@@ -66,10 +71,10 @@ std::vector<segment> readmodule(const std::string &path){
             type = shape::helix;
         }try{
             segment s;
-            s.chain = field("beg_label_asym_id");
-            if (s.chain.empty() || s.chain != field("end_label_asym_id")) continue;
-            s.first = std::stoi(field("beg_label_seq_id"));
-            s.last = std::stoi(field("end_label_seq_id"));
+            s.chain = preferred("beg_label_asym_id", "beg_auth_asym_id");
+            if (s.chain.empty() || s.chain != preferred("end_label_asym_id", "end_auth_asym_id")) continue;
+            s.first = std::stoi(preferred("beg_label_seq_id", "beg_auth_seq_id"));
+            s.last = std::stoi(preferred("end_label_seq_id", "end_auth_seq_id"));
             s.type = type;
             if (s.first <= s.last) segments.push_back(std::move(s));
         }catch (...){ continue; }
